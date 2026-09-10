@@ -141,6 +141,14 @@ export const reportsAPI = {
     const response = await api.post(`/reports/${id}/comments`, { message });
     return response.data;
   },
+  getPublicComments: async (ticketId) => {
+    const response = await api.get(`/reports/track/${ticketId}/comments`);
+    return response.data;
+  },
+  addPublicComment: async (ticketId, message) => {
+    const response = await api.post(`/reports/track/${ticketId}/comments`, { message });
+    return response.data;
+  },
   getComments: async (id) => {
     const response = await api.get(`/reports/${id}/comments`);
     return response.data;
