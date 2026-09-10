@@ -3,12 +3,13 @@ import { X, Calendar, MapPin, Tag, User, Wrench, FileText, Check, AlertCircle, I
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import ReportInvoiceModal from './ReportInvoiceModal';
+import ReportComments from './ReportComments';
 import { reportsAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/date';
 
 export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [status, setStatus] = useState(report?.status || 'Menunggu');
   const [technician, setTechnician] = useState(report?.technician || '');
   const [repairNotes, setRepairNotes] = useState(report?.repair_notes || '');
@@ -166,6 +167,11 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
                 <p className="font-semibold text-gray-800 dark:text-gray-200">{formatDateTime(report.updated_at)}</p>
               </div>
             </div>
+          </div>
+
+          {/* Real-time Comments / Live Chat */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <ReportComments reportId={report.id} currentUser={user} />
           </div>
 
           {/* If NOT Admin: Show technician and notes as read-only */}
