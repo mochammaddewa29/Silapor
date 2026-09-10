@@ -148,6 +148,44 @@ async function getUsersFromFirebase() {
   }
 }
 
+/**
+ * Menyimpan komentar ke sub-koleksi laporan di Cloud Firestore
+ * Path: 'reports/{reportId}/comments/{commentId}'
+ */
+async function syncCommentToFirebase(comment, reportId) {
+  if (!comment || !comment.id || !reportId) return;
+  try {
+    const commentDocRef = doc(db, `reports/${reportId}/comments`, String(comment.id));
+    const dataToSave = {
+      id: comment.id,
+      report_id: reportId,
+      user_id: comment.user_id,
+      sender_name: comment.sender_name,
+      role: comment.role,
+      message: comment.message,
+      created_at: comment.created_at || new Date().toISOString()
+    };
+    await withTimeout(setDoc(commentDocRef, dataToSave, { merge: true }), 5000);
+    console.log(`[Cloud Firestore] Komentar #${comment.id} berhasil disimpan ke laporan #${reportId}.`);
+  } catch (err) {
+    console.warn(`[Firestore Notice] Gagal sinkronisasi komentar #${comment.id}:`, err.message);
+  }
+}
+
+/**
+ * Mengambil seluruh komentar dari suatu laporan di Cloud Firestore
+ */
+async function getCommentsFromFirebase(reportId) {
+  if (!reportId) return [];
+  try {
+    const snapshot = await withTimeout(getDocs(collection(db, `reports/${reportId}/comments`)), 5000);
+    return snapshot.docs.map(d => d.data());
+  } catch (err) {
+    console.warn(`[Firestore Notice] Gagal mengambil komentar untuk laporan #${reportId}:`, err.message);
+    return [];
+  }
+}
+
 module.exports = {
   syncUserToFirebase,
   syncReportToFirebase,
@@ -155,5 +193,7 @@ module.exports = {
   deleteUserFromFirebase,
   syncAllToFirebase,
   getReportsFromFirebase,
-  getUsersFromFirebase
+  getUsersFromFirebase,
+  syncCommentToFirebase,
+  getCommentsFromFirebase
 };
