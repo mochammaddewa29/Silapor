@@ -49,7 +49,7 @@ const ReportComments = ({ reportId, currentUser, isPublic = false }) => {
 
   // Auto scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments]);
 
   const handleSendMessage = async (e) => {
