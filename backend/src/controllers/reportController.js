@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { queryAll, queryOne, runQuery, getDb, syncFromCloud } = require('../config/database');
-const { syncReportToFirebase, syncUserToFirebase } = require('../services/firebaseService');
+const { syncReportToFirebase, syncUserToFirebase, syncCommentToFirebase, getCommentsFromFirebase } = require('../services/firebaseService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
 const ExcelJS = require('exceljs');
 
@@ -91,6 +91,64 @@ exports.directReport = async (req, res) => {
   } catch (err) {
     console.error('Direct report error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server saat memproses aduan.' });
+  }
+};
+
+// Add comment to a report
+exports.addComment = async (req, res) => {
+  try {
+    const reportId = req.params.id;
+    const { message } = req.body;
+    
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
+    }
+
+    // Verify report exists
+    const report = queryOne('SELECT id FROM reports WHERE id = ?', [reportId]);
+    if (!report) {
+      return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
+    }
+
+    const { getLocalDateTime } = require('../utils/time');
+    const now = getLocalDateTime();
+    
+    const result = runQuery(
+      'INSERT INTO report_comments (report_id, user_id, sender_name, role, message, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [reportId, req.user.id, req.user.full_name, req.user.role, message, now]
+    );
+
+    const comment = queryOne('SELECT * FROM report_comments WHERE id = ?', [result.lastInsertRowid]);
+    
+    // Sync to Firebase
+    await syncCommentToFirebase(comment, reportId);
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat menambah komentar.' });
+  }
+};
+
+// Get comments for a report
+exports.getComments = async (req, res) => {
+  try {
+    const reportId = req.params.id;
+    
+    // First try from SQLite
+    let comments = queryAll('SELECT * FROM report_comments WHERE report_id = ? ORDER BY created_at ASC', [reportId]);
+    
+    // If empty in SQLite, maybe try from Firebase (for backward compatibility if needed)
+    if (comments.length === 0) {
+      comments = await getCommentsFromFirebase(reportId);
+      // Sort them by created_at
+      comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+    
+    res.json(comments);
+  } catch (err) {
+    console.error('Get comments error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat mengambil komentar.' });
   }
 };
 
@@ -491,6 +549,16 @@ exports.getDashboardStats = async (req, res) => {
       GROUP BY status
     `, statusQuery.params);
 
+    const locationQuery = buildWhere();
+    const byLocation = queryAll(`
+      SELECT location, COUNT(*) as count
+      FROM reports
+      ${locationQuery.whereStr}
+      GROUP BY location
+      ORDER BY count DESC
+      LIMIT 10
+    `, locationQuery.params);
+
     // Recent reports with joined user
     let recentConds = [];
     let recentParams = [];
@@ -526,6 +594,7 @@ exports.getDashboardStats = async (req, res) => {
         rejected: rejectedRow?.count || 0
       },
       byCategory,
+      byLocation,
       byMonth,
       byPriority,
       byStatus,
