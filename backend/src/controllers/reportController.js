@@ -156,6 +156,58 @@ exports.getComments = async (req, res) => {
   }
 };
 
+// Public Comments (for non-logged in users tracking their tickets)
+exports.getPublicComments = async (req, res) => {
+  try {
+    const ticketId = req.params.ticketId;
+    const report = queryOne('SELECT id FROM reports WHERE id = ?', [ticketId]);
+    if (!report) return res.status(404).json({ error: 'Tiket tidak ditemukan' });
+
+    let comments = queryAll('SELECT * FROM report_comments WHERE report_id = ? ORDER BY created_at ASC', [ticketId]);
+    if (comments.length === 0) {
+      const { getCommentsFromFirebase } = require('../services/firebaseService');
+      comments = await getCommentsFromFirebase(ticketId);
+      comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+    res.json(comments);
+  } catch (err) {
+    console.error('Get public comments error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.addPublicComment = async (req, res) => {
+  try {
+    const ticketId = req.params.ticketId;
+    const { message } = req.body;
+    
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
+    }
+
+    const report = queryOne('SELECT id, user_id, reporter_name FROM reports WHERE id = ?', [ticketId]);
+    if (!report) return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
+
+    const { getLocalDateTime } = require('../utils/time');
+    const now = getLocalDateTime();
+    
+    const result = runQuery(
+      'INSERT INTO report_comments (report_id, user_id, sender_name, role, message, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [ticketId, report.user_id, report.reporter_name + " (Pelapor)", "user", message, now]
+    );
+
+    const comment = queryOne('SELECT * FROM report_comments WHERE id = ?', [result.lastInsertRowid]);
+    
+    const { syncCommentToFirebase } = require('../services/firebaseService');
+    await syncCommentToFirebase(comment, ticketId);
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error('Add public comment error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Create a new report (authenticated)
 exports.createReport = async (req, res) => {
   try {
