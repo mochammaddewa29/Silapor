@@ -31,6 +31,7 @@ import { reportsAPI } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import ReportInvoiceModal from '../components/ReportInvoiceModal';
+import ReportComments from '../components/ReportComments';
 import { formatDate } from '../utils/date';
 
 export const LoginPage = () => {
@@ -660,6 +661,10 @@ export const LoginPage = () => {
 
                     <div className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/60 leading-relaxed">
                       {trackedReport.description}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#334155]">
+                      <ReportComments reportId={trackedReport.id} isPublic={true} currentUser={{ id: trackedReport.user_id || 0 }} />
                     </div>
 
                     <button
