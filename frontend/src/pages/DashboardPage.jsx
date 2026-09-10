@@ -385,6 +385,71 @@ export const DashboardPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Baris Baru: Chart Lokasi / Ruangan Paling Banyak Komplain */}
+      <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-5 sm:p-6 shadow-xs mt-6">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Ruangan Paling Banyak Komplain
+            </h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              10 lokasi dengan jumlah pengaduan kerusakan tertinggi
+            </p>
+          </div>
+        </div>
+
+        <div className="h-72 w-full pt-2">
+          {stats?.byLocation && stats.byLocation.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.byLocation} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#E2E8F0'} horizontal={false} />
+                <XAxis 
+                  type="number" 
+                  allowDecimals={false} 
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} 
+                  axisLine={{ stroke: isDark ? '#334155' : '#E2E8F0' }}
+                  tickLine={false}
+                />
+                <YAxis 
+                  dataKey="location" 
+                  type="category" 
+                  width={100}
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} 
+                  axisLine={{ stroke: isDark ? '#334155' : '#E2E8F0' }}
+                  tickLine={false}
+                />
+                <Tooltip 
+                  cursor={{ fill: isDark ? '#334155' : '#F1F5F9', opacity: 0.5 }}
+                  contentStyle={{
+                    backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                    borderColor: isDark ? '#334155' : '#E2E8F0',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    fontSize: '12px',
+                    color: isDark ? '#FFFFFF' : '#0F172A',
+                  }}
+                  formatter={(value) => [`${value} Komplain`, 'Jumlah']}
+                />
+                <Bar 
+                  dataKey="count" 
+                  fill="#EC4899" 
+                  radius={[0, 6, 6, 0]} 
+                  maxBarSize={30} 
+                  label={{ position: 'right', fill: isDark ? '#CBD5E1' : '#64748B', fontSize: 11 }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-slate-400">
+              Belum ada data lokasi pengaduan.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
