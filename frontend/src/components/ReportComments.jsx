@@ -3,20 +3,31 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { reportsAPI } from '../services/api';
 
-const ReportComments = ({ reportId, currentUser }) => {
+const ReportComments = ({ reportId, currentUser, isPublic = false }) => {
   const [comments, setComments] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const messagesEndRef = useRef(null);
+  const commentsEndRef = useRef(null);
+
+  // Auto scroll to bottom
+  const scrollToBottom = () => {
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // Initialize and listen to Firebase Firestore
   useEffect(() => {
     if (!reportId) return;
 
-    // Load initial comments from backend (for backward compatibility / SQLite sync)
-    reportsAPI.getComments(reportId).then((data) => {
-      setComments(data);
-    }).catch(console.error);
+    // Load initial data
+    if (isPublic) {
+      reportsAPI.getPublicComments(reportId)
+        .then((data) => setComments(data))
+        .catch(console.error);
+    } else {
+      reportsAPI.getComments(reportId)
+        .then((data) => setComments(data))
+        .catch(console.error);
+    }
 
     // Set up Real-time listener for this specific report's comments
     const q = query(
@@ -47,7 +58,11 @@ const ReportComments = ({ reportId, currentUser }) => {
 
     setIsSubmitting(true);
     try {
-      await reportsAPI.addComment(reportId, newMessage);
+      if (isPublic) {
+        await reportsAPI.addPublicComment(reportId, newMessage);
+      } else {
+        await reportsAPI.addComment(reportId, newMessage);
+      }
       setNewMessage('');
     } catch (err) {
       console.error('Failed to send comment:', err);
@@ -131,7 +146,7 @@ const ReportComments = ({ reportId, currentUser }) => {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Ketik pesan balasan..."
-            className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+            className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-gray-900"
             disabled={isSubmitting}
           />
           <button
