@@ -24,6 +24,8 @@ router.post('/direct', upload.single('photo'), reportController.directReport);
 
 // Public Ticket Tracker (No auth required)
 router.get('/track/:ticketId', reportController.trackReport);
+router.get('/track/:ticketId/comments', reportController.getPublicComments);
+router.post('/track/:ticketId/comments', reportController.addPublicComment);
 
 // CRUD
 router.post('/', authenticate, upload.single('photo'), reportController.createReport);
