@@ -136,7 +136,7 @@ const ReportComments = ({ reportId, currentUser, isPublic = false }) => {
             );
           })
         )}
-        <div ref={messagesEndRef} />
+        <div ref={commentsEndRef} />
       </div>
 
       <div className="bg-white border-t p-3">
