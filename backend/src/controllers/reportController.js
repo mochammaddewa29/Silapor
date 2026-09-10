@@ -110,12 +110,16 @@ exports.addComment = async (req, res) => {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
+    // Fetch sender_name since full_name is not in JWT payload
+    const user = queryOne('SELECT full_name, username FROM users WHERE id = ?', [req.user.id]);
+    const senderName = user ? (user.full_name || user.username) : 'Unknown';
+
     const { getLocalDateTime } = require('../utils/time');
     const now = getLocalDateTime();
     
     const result = runQuery(
       'INSERT INTO report_comments (report_id, user_id, sender_name, role, message, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [reportId, req.user.id, req.user.full_name, req.user.role, message, now]
+      [reportId, req.user.id, senderName, req.user.role, message, now]
     );
 
     const comment = queryOne('SELECT * FROM report_comments WHERE id = ?', [result.lastInsertRowid]);
