@@ -30,6 +30,10 @@ router.post('/', authenticate, upload.single('photo'), reportController.createRe
 router.get('/', authenticate, reportController.getReports);
 router.get('/:id', authenticate, reportController.getReport);
 
+// Comments (Live Chat)
+router.post('/:id/comments', authenticate, reportController.addComment);
+router.get('/:id/comments', authenticate, reportController.getComments);
+
 // Admin actions
 router.put('/:id/status', authenticate, requireAdmin, reportController.updateStatus);
 router.put('/:id/assign', authenticate, requireAdmin, reportController.assignTechnician);
