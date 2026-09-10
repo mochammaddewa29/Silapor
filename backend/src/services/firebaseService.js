@@ -8,6 +8,17 @@ const {
   deleteDoc 
 } = require('../config/firebase');
 
+// Helper wrapper untuk menghindari Firebase SDK Web hang pada Vercel Serverless Function
+const withTimeout = (promise, ms = 5000, fallback = null) => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Operation timed out after ${ms}ms`));
+    }, ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+};
+
 /**
  * Menyimpan atau memperbarui data user ke Cloud Firestore
  * Collection: 'users' -> Document ID: String(user.id)
@@ -23,7 +34,7 @@ async function syncUserToFirebase(user) {
       role: user.role,
       created_at: user.created_at || new Date().toISOString()
     };
-    await setDoc(userDocRef, dataToSave, { merge: true });
+    await withTimeout(setDoc(userDocRef, dataToSave, { merge: true }), 5000);
     console.log(`[Cloud Firestore] User #${user.id} (${user.username}) berhasil disimpan ke Firestore.`);
   } catch (err) {
     console.warn(`[Firestore Notice] Gagal sinkronisasi user #${user.id} ke Firestore:`, err.message);
@@ -55,7 +66,7 @@ async function syncReportToFirebase(report) {
       created_at: report.created_at || new Date().toISOString(),
       updated_at: report.updated_at || new Date().toISOString()
     };
-    await setDoc(reportDocRef, dataToSave, { merge: true });
+    await withTimeout(setDoc(reportDocRef, dataToSave, { merge: true }), 5000);
     console.log(`[Cloud Firestore] Laporan #${report.id} ("${report.item_name}") berhasil disimpan ke Firestore.`);
   } catch (err) {
     console.warn(`[Firestore Notice] Gagal sinkronisasi laporan #${report.id} ke Firestore:`, err.message);
@@ -69,7 +80,7 @@ async function deleteReportFromFirebase(reportId) {
   if (!reportId) return;
   try {
     const reportDocRef = doc(db, 'reports', String(reportId));
-    await deleteDoc(reportDocRef);
+    await withTimeout(deleteDoc(reportDocRef), 5000);
     console.log(`[Cloud Firestore] Laporan #${reportId} dihapus dari Firestore.`);
   } catch (err) {
     console.warn(`[Firestore Notice] Gagal menghapus laporan #${reportId} dari Firestore:`, err.message);
@@ -83,7 +94,7 @@ async function deleteUserFromFirebase(userId) {
   if (!userId) return;
   try {
     const userDocRef = doc(db, 'users', String(userId));
-    await deleteDoc(userDocRef);
+    await withTimeout(deleteDoc(userDocRef), 5000);
     console.log(`[Cloud Firestore] User #${userId} dihapus dari Firestore.`);
   } catch (err) {
     console.warn(`[Firestore Notice] Gagal menghapus user #${userId} dari Firestore:`, err.message);
@@ -116,7 +127,7 @@ async function syncAllToFirebase(users = [], reports = []) {
  */
 async function getReportsFromFirebase() {
   try {
-    const snapshot = await getDocs(collection(db, 'reports'));
+    const snapshot = await withTimeout(getDocs(collection(db, 'reports')), 5000);
     return snapshot.docs.map(d => d.data());
   } catch (err) {
     console.warn('[Firestore Notice] Gagal mengambil laporan dari Firestore:', err.message);
@@ -129,7 +140,7 @@ async function getReportsFromFirebase() {
  */
 async function getUsersFromFirebase() {
   try {
-    const snapshot = await getDocs(collection(db, 'users'));
+    const snapshot = await withTimeout(getDocs(collection(db, 'users')), 5000);
     return snapshot.docs.map(d => d.data());
   } catch (err) {
     console.warn('[Firestore Notice] Gagal mengambil users dari Firestore:', err.message);
