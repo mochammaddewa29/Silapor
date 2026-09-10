@@ -137,6 +137,14 @@ export const reportsAPI = {
     const baseURL = import.meta.env.VITE_API_URL || '/api';
     return `${baseURL}/reports/export/excel${query ? `?${query}` : ''}`;
   },
+  addComment: async (id, message) => {
+    const response = await api.post(`/reports/${id}/comments`, { message });
+    return response.data;
+  },
+  getComments: async (id) => {
+    const response = await api.get(`/reports/${id}/comments`);
+    return response.data;
+  },
 };
 
 export const getImageUrl = (path) => {
