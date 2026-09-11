@@ -90,7 +90,7 @@ export const CloudStatusBadge = () => {
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                  Cloud Name: hrjclerk
+                  Cloud Name: {import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'yyeijl6c'}
                 </p>
               </div>
             </div>
