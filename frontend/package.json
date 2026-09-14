@@ -20,6 +20,7 @@
     "firebase": "^12.18.0",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.43.0",
+    "pdfmake": "^0.3.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",

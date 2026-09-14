@@ -17,6 +17,42 @@ import {
 } from 'lucide-react';
 import { formatDateTime } from '../utils/date';
 import { getImageUrl } from '../services/api';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+
+// Inisialisasi font bawaan (Roboto) untuk pdfMake di browser
+if (pdfFonts && pdfFonts.pdfMake) {
+  pdfMake.vfs = pdfFonts.pdfMake.vfs;
+}
+
+// Helper untuk convert gambar URL (Cloudinary/Lokal) menjadi Base64 melalui Canvas
+const getBase64ImageFromUrl = async (imageUrl) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      // Mencegah memory crash di HP jika gambar terlalu besar
+      const MAX_WIDTH = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX_WIDTH) {
+         height = Math.round((height * MAX_WIDTH) / width);
+         width = MAX_WIDTH;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7)); 
+    };
+    img.onerror = () => {
+      console.warn("Gagal meload gambar untuk PDF, dilanjutkan tanpa gambar");
+      resolve(null);
+    };
+    img.src = imageUrl;
+  });
+};
 
 export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm }) => {
   if (!isOpen || !report) return null;
@@ -37,43 +73,175 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
     try {
       setIsExporting(true);
       
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const apiUrl = `${backendUrl}/api/reports/track/${report.id}/pdf`;
-      
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        const textData = await response.text();
-        console.error('Server error response text:', textData);
-        try {
-           const json = JSON.parse(textData);
-           throw new Error(json.error || 'Server error');
-        } catch(e) {
-           throw new Error('Vercel Crash: ' + textData.substring(0, 100));
-        }
+      let photoBase64 = null;
+      if (photoFullUrl) {
+         photoBase64 = await getBase64ImageFromUrl(photoFullUrl);
       }
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const fileName = `Invoice_Laporan_${ticketNumber}.pdf`;
 
+      const docDefinition = {
+        pageSize: 'A4',
+        pageMargins: [ 40, 40, 40, 80 ],
+        defaultStyle: { fontSize: 10, color: '#333333' },
+        content: [
+          // Header
+          {
+            columns: [
+              {
+                width: '*',
+                stack: [
+                  { text: 'SISTEM PENGADUAN MAINTENANCE', fontSize: 16, bold: true, color: '#1e3a8a' },
+                  { text: 'Tanda Terima Permintaan Perbaikan Fasilitas', fontSize: 10, color: '#64748b', margin: [0, 4, 0, 0] }
+                ]
+              },
+              {
+                width: 'auto',
+                stack: [
+                  { text: 'INVOICE', fontSize: 24, bold: true, color: '#e2e8f0', alignment: 'right', characterSpacing: 2 },
+                  { text: `#${ticketNumber}`, fontSize: 12, bold: true, color: '#1e40af', alignment: 'right', margin: [0, 4, 0, 0] },
+                  { text: formatDateTime(report.created_at || new Date().toISOString()), fontSize: 9, color: '#94a3b8', alignment: 'right', margin: [0, 2, 0, 0] }
+                ]
+              }
+            ],
+            margin: [0, 0, 0, 20]
+          },
+          
+          // Line separator
+          { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#1e293b' }], margin: [0, 0, 0, 20] },
+
+          // Status Board
+          {
+            table: {
+              widths: ['*', '*', '*'],
+              body: [
+                [
+                  { text: 'STATUS TIKET', fontSize: 9, bold: true, color: '#64748b', alignment: 'center', border: [false, false, true, false] },
+                  { text: 'PRIORITAS', fontSize: 9, bold: true, color: '#64748b', alignment: 'center', border: [false, false, true, false] },
+                  { text: 'KATEGORI', fontSize: 9, bold: true, color: '#64748b', alignment: 'center', border: [false, false, false, false] }
+                ],
+                [
+                  { text: (report.status || 'Menunggu').toUpperCase(), fontSize: 11, bold: true, color: '#b45309', alignment: 'center', border: [false, false, true, false], margin: [0, 5, 0, 0] },
+                  { text: (report.priority || 'Sedang').toUpperCase(), fontSize: 11, bold: true, color: report.priority === 'Tinggi' ? '#b91c1c' : (report.priority === 'Rendah' ? '#15803d' : '#b45309'), alignment: 'center', border: [false, false, true, false], margin: [0, 5, 0, 0] },
+                  { text: report.category, fontSize: 11, bold: true, color: '#1e293b', alignment: 'center', border: [false, false, false, false], margin: [0, 5, 0, 0] }
+                ]
+              ]
+            },
+            layout: {
+               hLineWidth: () => 0,
+               vLineWidth: (i) => (i === 1 || i === 2) ? 1 : 0,
+               vLineColor: () => '#e2e8f0',
+               paddingLeft: () => 10,
+               paddingRight: () => 10,
+               paddingTop: () => 10,
+               paddingBottom: () => 10
+            },
+            fillColor: '#f8fafc',
+            margin: [0, 0, 0, 25]
+          },
+
+          { text: 'RINCIAN PELAPOR & KERUSAKAN', fontSize: 10, bold: true, color: '#0f172a', characterSpacing: 1, margin: [0, 0, 0, 10] },
+          { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 15] },
+
+          {
+            columns: [
+              {
+                width: '50%',
+                stack: [
+                  { text: 'Nama Pelapor', fontSize: 9, bold: true, color: '#64748b' },
+                  { text: report.reporter_name || '-', fontSize: 12, bold: true, color: '#0f172a', margin: [0, 2, 0, 15] },
+                  { text: 'Divisi / Unit Kerja', fontSize: 9, bold: true, color: '#64748b' },
+                  { text: report.division || '-', fontSize: 12, bold: true, color: '#0f172a', margin: [0, 2, 0, 0] }
+                ]
+              },
+              {
+                width: '50%',
+                stack: [
+                  { text: 'Lokasi / Ruangan', fontSize: 9, bold: true, color: '#64748b' },
+                  { text: report.location || '-', fontSize: 12, bold: true, color: '#0f172a', margin: [0, 2, 0, 0] }
+                ]
+              }
+            ],
+            margin: [0, 0, 0, 15]
+          },
+          
+          // Details Box
+          {
+            table: {
+              widths: ['*'],
+              body: [
+                [
+                  {
+                    stack: [
+                      { text: 'Barang & Detail Kerusakan', fontSize: 9, bold: true, color: '#64748b', margin: [0, 0, 0, 5] },
+                      { text: report.item_name || '-', fontSize: 12, bold: true, color: '#0f172a', margin: [0, 0, 0, 8] },
+                      { text: report.description || '-', fontSize: 10, color: '#334155', lineHeight: 1.3 }
+                    ],
+                    border: [false, false, false, false],
+                    fillColor: '#f8fafc',
+                    margin: [15, 15, 15, 15]
+                  }
+                ]
+              ]
+            },
+            layout: {
+              defaultBorder: false,
+            },
+            margin: [0, 0, 0, 20]
+          }
+        ],
+        
+        footer: function(currentPage, pageCount) {
+          return {
+            margin: [40, 20, 40, 0],
+            columns: [
+              {
+                stack: [
+                  { text: 'Waktu Cetak Dokumen:', fontSize: 8, bold: true, color: '#94a3b8' },
+                  { text: new Date().toLocaleString('id-ID'), fontSize: 9, color: '#0f172a', margin: [0, 2, 0, 4] },
+                  { text: 'Dokumen ini dihasilkan secara otomatis oleh Sistem Informasi Pengaduan Maintenance & Fasilitas. Dokumen ini sah dan dapat digunakan sebagai tanda terima permohonan perbaikan.', fontSize: 7, color: '#94a3b8' }
+                ],
+                width: '70%'
+              },
+              {
+                stack: [
+                  { text: 'Petugas / Sistem', fontSize: 8, bold: true, color: '#94a3b8', alignment: 'right' },
+                  { text: 'Auto-Generated', fontSize: 10, bold: true, color: '#0f172a', alignment: 'right', margin: [0, 20, 0, 0] }
+                ],
+                width: '30%'
+              }
+            ]
+          };
+        }
+      };
+
+      if (photoBase64) {
+        docDefinition.content.push({ text: 'FOTO LAMPIRAN', fontSize: 10, bold: true, color: '#0f172a', characterSpacing: 1, margin: [0, 15, 0, 10] });
+        docDefinition.content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 15] });
+        docDefinition.content.push({
+          image: photoBase64,
+          fit: [250, 250],
+          alignment: 'center',
+          margin: [0, 10, 0, 20]
+        });
+      }
+
+      const fileName = `Invoice_Laporan_${ticketNumber}.pdf`;
+      const pdfGenerator = pdfMake.createPdf(docDefinition);
+      
       const isMobile = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
       
-      // Jika desktop, langsung download otomatis tanpa 2-step
       if (!isMobile) {
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        pdfGenerator.download(fileName);
       } else {
-        // Jika HP/Safari, simpan ke state untuk Step 2
-        setPdfReadyData({ file: new File([blob], fileName, { type: 'application/pdf' }), blobUrl, fileName });
+        // Untuk safari / mobile, kita simpan blob URL ke state untuk diklik
+        pdfGenerator.getBlob((blob) => {
+           const blobUrl = URL.createObjectURL(blob);
+           setPdfReadyData({ file: new File([blob], fileName, { type: 'application/pdf' }), blobUrl, fileName });
+        });
       }
       
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
-      alert('Gagal mengambil PDF dari server: ' + err.message);
+      alert('Gagal menyusun PDF di browser: ' + err.message);
     } finally {
       setIsExporting(false);
     }

@@ -24,7 +24,6 @@ router.post('/direct', upload.single('photo'), reportController.directReport);
 
 // Public Ticket Tracker (No auth required)
 router.get('/track/:ticketId', reportController.trackReport);
-router.get('/track/:ticketId/pdf', reportController.exportPDF); // NEW: Endpoint export PDF via Puppeteer
 router.get('/track/:ticketId/comments', reportController.getPublicComments);
 router.post('/track/:ticketId/comments', reportController.addPublicComment);
 
