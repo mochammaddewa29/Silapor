@@ -90,9 +90,9 @@ async function initDatabase() {
   }
 
   try {
-    db.run("ALTER TABLE reports ADD COLUMN ticket_number TEXT UNIQUE");
+    db.run("ALTER TABLE reports ADD COLUMN ticket_number TEXT");
   } catch (e) {
-    // Column already exists
+    // Column already exists or error
   }
 
   try {
