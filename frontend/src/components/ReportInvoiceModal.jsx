@@ -46,8 +46,28 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 overflow-y-auto bg-black/70 backdrop-blur-md transition-opacity">
-      <div className="relative w-full max-w-2xl my-auto rounded-2xl sm:rounded-3xl bg-white shadow-2xl transition-all dark:bg-gray-900 dark:border dark:border-gray-700 max-h-[94vh] flex flex-col overflow-hidden">
+    <>
+      <style type="text/css">
+        {`
+          @media print {
+            body { background: white !important; }
+            body * { visibility: hidden; }
+            #invoice-print-area, #invoice-print-area * { visibility: visible; }
+            #invoice-print-area {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 10px;
+              overflow: visible !important;
+              max-height: none !important;
+            }
+            .fixed { position: absolute !important; }
+          }
+        `}
+      </style>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 overflow-y-auto bg-black/70 backdrop-blur-md transition-opacity print:bg-transparent print:p-0">
+        <div className="relative w-full max-w-2xl my-auto rounded-2xl sm:rounded-3xl bg-white shadow-2xl transition-all dark:bg-gray-900 dark:border dark:border-gray-700 max-h-[94vh] flex flex-col overflow-hidden print:shadow-none print:border-none print:max-w-none print:rounded-none print:m-0">
         
         {/* Top Notification Bar (no-print) */}
         <div className="no-print bg-emerald-600 px-4 py-2 sm:px-6 sm:py-2.5 text-white text-xs font-semibold flex items-center justify-between shrink-0">
@@ -247,6 +267,7 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
 
       </div>
     </div>
+    </>
   );
 };
 
