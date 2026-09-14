@@ -18,10 +18,14 @@ import {
 import { formatDateTime } from '../utils/date';
 import { getImageUrl } from '../services/api';
 
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+
 export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm }) => {
   if (!isOpen || !report) return null;
 
   const [imgError, setImgError] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   React.useEffect(() => {
     setImgError(false);
@@ -30,8 +34,40 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   const ticketNumber = report?.ticket_number || `TKT-${String(report?.id || '').padStart(5, '0')}`;
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      setIsExporting(true);
+      const element = document.getElementById('invoice-print-area');
+      
+      // Sempatkan delay kecil agar DOM siap
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Invoice_Laporan_${ticketNumber}.pdf`);
+    } catch (err) {
+      console.error('Gagal membuat PDF:', err);
+      // Fallback ke browser print
+      window.print();
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getPriorityStyle = (p) => {
@@ -248,10 +284,20 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
             <button
               type="button"
               onClick={handlePrint}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all"
+              disabled={isExporting}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Printer className="h-4 w-4" />
-              <span>Cetak Bukti (Print / PDF)</span>
+              {isExporting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <span>Memproses PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Printer className="h-4 w-4" />
+                  <span>Unduh PDF / Cetak</span>
+                </>
+              )}
             </button>
 
             <button
