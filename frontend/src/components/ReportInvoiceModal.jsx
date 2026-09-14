@@ -37,15 +37,15 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
   const handlePreparePDF = async () => {
+    let clone = null;
     try {
       setIsExporting(true);
-      // TARGET TEMPLATE BARU YANG FIXED 800px BUKAN RESPONSIVE UI
       const element = document.getElementById('pdf-export-template');
+      if (!element) throw new Error("Template PDF tidak ditemukan");
       
-      const clone = element.cloneNode(true);
+      clone = element.cloneNode(true);
+      clone.id = 'pdf-export-clone'; // Hindari duplikat ID dengan template asli
 
-      // Karena template baru tidak pakai class dark, kita hapus regex class-stripping yang berat
-      // dan langsung atur style clone
       clone.style.position = 'absolute';
       clone.style.top = '0px'; 
       clone.style.left = '0px';
@@ -59,22 +59,27 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       document.body.appendChild(clone);
       const isMobileDevice = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
       
-      // Kurangi delay untuk mempercepat proses
       await new Promise(resolve => setTimeout(resolve, 100));
       
       const canvas = await html2canvas(clone, {
-        scale: isMobileDevice ? 1.5 : 2, // Turunkan resolusi sedikit di HP agar 2x lebih cepat
+        scale: isMobileDevice ? 1.5 : 2, 
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
       
-      document.body.removeChild(clone);
+      if (canvas.width === 0 || canvas.height === 0) {
+         throw new Error("Render canvas kosong (0x0)");
+      }
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      if (!pdfHeight || isNaN(pdfHeight)) {
+          throw new Error("Kalkulasi dimensi PDF tidak valid");
+      }
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       
@@ -87,17 +92,20 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       // Jika desktop, langsung download otomatis tanpa 2-step
       if (!isMobile) {
         pdf.save(fileName);
-        setIsExporting(false);
-        return;
+      } else {
+        // Jika HP/Safari, simpan ke state untuk Step 2
+        setPdfReadyData({ file: new File([blob], fileName, { type: 'application/pdf' }), blobUrl, fileName });
       }
-      
-      // Jika HP/Safari, simpan ke state untuk Step 2 (klik manual pengguna tanpa delay)
-      setPdfReadyData({ file: new File([blob], fileName, { type: 'application/pdf' }), blobUrl, fileName });
       
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
-      window.print();
+      alert('Gagal menyusun PDF: ' + err.message);
     } finally {
+      // GARANSI: Selalu hapus clone dari body bagaimanapun juga (baik sukses maupun error)
+      // Ini mencegah bug layar HP tertutup kotak putih besar
+      if (clone && document.body.contains(clone)) {
+        document.body.removeChild(clone);
+      }
       setIsExporting(false);
     }
   };
