@@ -18,7 +18,7 @@ import {
 import { formatDateTime } from '../utils/date';
 import { getImageUrl } from '../services/api';
 
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 
 export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm }) => {
