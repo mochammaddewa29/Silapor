@@ -1057,3 +1057,197 @@ exports.exportExcel = async (req, res) => {
     res.status(500).json({ error: 'Terjadi kesalahan server saat membuat file Excel.' });
   }
 };
+
+// Export PDF via Puppeteer
+exports.exportPDF = async (req, res) => {
+  try {
+    const ticketId = req.params.ticketId;
+    const { queryOne } = require('../config/database');
+    const report = queryOne('SELECT * FROM reports WHERE id = ? OR ticket_number = ?', [ticketId, ticketId]);
+    if (!report) {
+      return res.status(404).json({ error: 'Laporan tidak ditemukan' });
+    }
+
+    // Determine the environment
+    const isVercel = process.env.VERCEL === '1';
+    
+    let browser;
+    if (isVercel) {
+      const chromium = require('@sparticuz/chromium');
+      const puppeteerCore = require('puppeteer-core');
+      browser = await puppeteerCore.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+      });
+    } else {
+      const puppeteer = require('puppeteer');
+      browser = await puppeteer.launch({ 
+         headless: 'new',
+         args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+      });
+    }
+
+    const page = await browser.newPage();
+
+    // Determine full photo URL if exists
+    let photoUrlHtml = '';
+    if (report.photo_url) {
+       const photoUrl = report.photo_url.startsWith('http') 
+          ? report.photo_url 
+          : `${req.protocol}://${req.get('host')}${report.photo_url}`;
+       photoUrlHtml = `
+         <div class="mb-8">
+            <h3 class="text-sm font-black uppercase tracking-widest text-gray-800 border-b border-gray-200 pb-2 mb-4">
+              Foto Lampiran Kerusakan
+            </h3>
+            <div class="border-2 border-dashed border-gray-200 rounded-xl p-2 bg-gray-50 max-w-sm">
+              <img src="${photoUrl}" alt="Lampiran" class="w-full h-auto object-contain rounded-lg" />
+            </div>
+         </div>
+       `;
+    }
+
+    // priority badge styling
+    let priorityClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    if (report.priority === 'Tinggi') {
+      priorityClass = 'bg-red-100 text-red-800 border-red-200';
+    } else if (report.priority === 'Sedang') {
+      priorityClass = 'bg-amber-100 text-amber-800 border-amber-200';
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="id">
+      <head>
+        <meta charset="UTF-8">
+        <title>Invoice ${report.ticket_number}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; }
+          .invoice-box { max-width: 800px; margin: auto; padding: 40px; font-family: 'Inter', sans-serif; }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-box">
+          <div class="flex justify-between items-center border-b-4 border-gray-900 pb-6 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-400 text-blue-950 shadow-md font-black text-2xl">
+                ⚡
+              </div>
+              <div>
+                <h2 class="text-2xl font-black tracking-tight text-gray-900 uppercase">
+                  Sistem Pengaduan Maintenance
+                </h2>
+                <p class="text-sm font-semibold text-gray-600">
+                  Tanda Terima Permintaan Perbaikan Fasilitas
+                </p>
+              </div>
+            </div>
+            <div class="text-right">
+              <h1 class="text-3xl font-black text-gray-200 uppercase tracking-widest mb-2">INVOICE</h1>
+              <span class="inline-block px-4 py-1.5 rounded-full bg-blue-100 text-blue-800 font-mono text-sm font-bold tracking-wider mb-2">
+                #${report.ticket_number}
+              </span>
+              <p class="text-xs text-gray-500 flex items-center justify-end gap-1 font-medium">
+                ${new Date(report.created_at).toLocaleString('id-ID')}
+              </p>
+            </div>
+          </div>
+
+          <!-- Status Row -->
+          <div class="flex items-center justify-between bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8">
+            <div class="w-1/3 text-center border-r border-gray-200">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Status Tiket</span>
+              <span class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200">
+                ${report.status || 'Menunggu Konfirmasi'}
+              </span>
+            </div>
+            <div class="w-1/3 text-center border-r border-gray-200">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Prioritas Perbaikan</span>
+              <span class="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-lg border ${priorityClass}">
+                ${report.priority || 'Sedang'}
+              </span>
+            </div>
+            <div class="w-1/3 text-center">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Kategori</span>
+              <span class="inline-flex items-center gap-1.5 text-sm font-bold text-gray-800 bg-white border border-gray-200 px-3 py-1.5 rounded-lg">
+                ${report.category}
+              </span>
+            </div>
+          </div>
+
+          <!-- Content Grid -->
+          <div class="mb-6">
+            <h3 class="text-sm font-black uppercase tracking-widest text-gray-800 border-b border-gray-200 pb-2 mb-4">
+              Rincian Pelapor & Kerusakan
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                <span class="text-xs font-bold text-gray-500 block mb-1">Nama Pelapor</span>
+                <p class="font-black text-gray-900 text-lg">${report.reporter_name}</p>
+              </div>
+              <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                <span class="text-xs font-bold text-gray-500 block mb-1">Divisi / Unit Kerja</span>
+                <p class="font-black text-gray-900 text-lg">${report.division || '-'}</p>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 mb-4">
+              <span class="text-xs font-bold text-gray-500 block mb-1">Lokasi / Ruangan Kerusakan</span>
+              <p class="font-black text-gray-900 text-lg">${report.location}</p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
+              <span class="text-xs font-bold text-gray-500 block mb-1">Barang & Detail Kerusakan</span>
+              <p class="font-black text-gray-900 text-lg mb-2">${report.item_name}</p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">${report.description}</p>
+            </div>
+          </div>
+
+          ${photoUrlHtml}
+
+          <!-- Footer -->
+          <div class="mt-12 border-t-2 border-gray-900 pt-6 flex justify-between items-end">
+            <div>
+              <p class="text-xs font-bold text-gray-500 mb-1">Waktu Cetak Dokumen:</p>
+              <p class="text-sm font-mono text-gray-800">${new Date().toLocaleString('id-ID')}</p>
+              <p class="text-[10px] text-gray-400 mt-2 max-w-sm">
+                Dokumen ini dihasilkan secara otomatis oleh Sistem Informasi Pengaduan Maintenance & Fasilitas. Dokumen ini sah dan dapat digunakan sebagai tanda terima permohonan perbaikan.
+              </p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs font-bold text-gray-500 mb-12">Petugas / Sistem</p>
+                <p class="text-sm font-black text-gray-900 border-t border-gray-400 pt-2 inline-block px-8">Auto-Generated</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // We MUST use networkidle0 to wait for Tailwind CDN to finish compiling and styling the HTML!
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '0px', bottom: '0px', left: '0px', right: '0px' }
+    });
+
+    await browser.close();
+
+    const fileName = `Invoice_Laporan_${report.ticket_number}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('Error generating PDF with Puppeteer:', err);
+    res.status(500).json({ error: 'Gagal membuat PDF di server.' });
+  }
+};

@@ -18,9 +18,6 @@ import {
 import { formatDateTime } from '../utils/date';
 import { getImageUrl } from '../services/api';
 
-import html2canvas from 'html2canvas-pro';
-import { jsPDF } from 'jspdf';
-
 export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm }) => {
   if (!isOpen || !report) return null;
 
@@ -37,61 +34,31 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
   const handlePreparePDF = async () => {
-    let clone = null;
     try {
       setIsExporting(true);
-      const element = document.getElementById('pdf-export-template');
-      if (!element) throw new Error("Template PDF tidak ditemukan");
       
-      clone = element.cloneNode(true);
-      clone.id = 'pdf-export-clone'; // Hindari duplikat ID dengan template asli
-
-      clone.style.position = 'absolute';
-      clone.style.top = '0px'; 
-      clone.style.left = '0px';
-      clone.style.zIndex = '-9999'; 
-      clone.style.width = '800px'; // Paksa ukuran A4 Desktop agar konsisten di PC dan HP
-      clone.style.height = 'auto';
-      clone.style.overflow = 'visible';
-      clone.style.maxHeight = 'none';
-      clone.style.backgroundColor = '#ffffff';
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiUrl = `${backendUrl}/api/reports/track/${report.id}/pdf`;
       
-      document.body.appendChild(clone);
-      const isMobileDevice = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const canvas = await html2canvas(clone, {
-        scale: isMobileDevice ? 1.5 : 2, 
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      if (canvas.width === 0 || canvas.height === 0) {
-         throw new Error("Render canvas kosong (0x0)");
-      }
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      if (!pdfHeight || isNaN(pdfHeight)) {
-          throw new Error("Kalkulasi dimensi PDF tidak valid");
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error('Gagal mengunduh PDF dari server');
       }
       
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      
-      const fileName = `Invoice_Laporan_${ticketNumber}.pdf`;
-      const blob = pdf.output('blob');
+      const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
+      const fileName = `Invoice_Laporan_${ticketNumber}.pdf`;
 
       const isMobile = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
       
       // Jika desktop, langsung download otomatis tanpa 2-step
       if (!isMobile) {
-        pdf.save(fileName);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       } else {
         // Jika HP/Safari, simpan ke state untuk Step 2
         setPdfReadyData({ file: new File([blob], fileName, { type: 'application/pdf' }), blobUrl, fileName });
@@ -99,13 +66,8 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
-      alert('Gagal menyusun PDF: ' + err.message);
+      alert('Gagal mengambil PDF dari server: ' + err.message);
     } finally {
-      // GARANSI: Selalu hapus clone dari body bagaimanapun juga (baik sukses maupun error)
-      // Ini mencegah bug layar HP tertutup kotak putih besar
-      if (clone && document.body.contains(clone)) {
-        document.body.removeChild(clone);
-      }
       setIsExporting(false);
     }
   };
