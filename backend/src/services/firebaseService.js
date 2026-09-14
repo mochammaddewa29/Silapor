@@ -80,8 +80,17 @@ async function deleteReportFromFirebase(reportId) {
   if (!reportId) return;
   try {
     const reportDocRef = doc(db, 'reports', String(reportId));
+    
+    // Hapus subcollection comments untuk mencegah ghost data (sisa chat lama)
+    const commentsColRef = collection(db, `reports/${reportId}/comments`);
+    const commentsSnapshot = await withTimeout(getDocs(commentsColRef), 5000);
+    if (commentsSnapshot && !commentsSnapshot.empty) {
+      const deletePromises = commentsSnapshot.docs.map(docSnap => deleteDoc(docSnap.ref));
+      await Promise.allSettled(deletePromises);
+    }
+
     await withTimeout(deleteDoc(reportDocRef), 5000);
-    console.log(`[Cloud Firestore] Laporan #${reportId} dihapus dari Firestore.`);
+    console.log(`[Cloud Firestore] Laporan #${reportId} dan chat-nya dihapus dari Firestore.`);
   } catch (err) {
     console.warn(`[Firestore Notice] Gagal menghapus laporan #${reportId} dari Firestore:`, err.message);
   }
