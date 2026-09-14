@@ -122,7 +122,7 @@ const GlobalChatWidget = () => {
                             report.category === 'Infrastruktur' ? 'bg-indigo-500' :
                             report.category === 'Jaringan' ? 'bg-emerald-500' : 'bg-gray-500'
                           }`}>
-                            {report.item_name.charAt(0).toUpperCase()}
+                            {report.reporter_name.charAt(0).toUpperCase()}
                           </div>
                           {unread > 0 && (
                             <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-rose-500 border-2 border-white dark:border-gray-800"></span>
@@ -133,7 +133,7 @@ const GlobalChatWidget = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-baseline mb-0.5">
                             <h4 className={`text-sm truncate pr-2 ${unread > 0 ? 'font-bold text-gray-900 dark:text-white' : 'font-semibold text-gray-700 dark:text-gray-200'}`}>
-                              {report.item_name}
+                              {report.reporter_name}
                             </h4>
                             <span className="text-[10px] text-gray-400 shrink-0 whitespace-nowrap">
                               {latestMsg ? formatDate(latestMsg.created_at) : formatDate(report.created_at)}
