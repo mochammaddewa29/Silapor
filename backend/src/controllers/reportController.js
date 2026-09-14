@@ -667,6 +667,13 @@ exports.getDashboardStats = async (req, res) => {
       LIMIT 10
     `, locationQuery.params);
 
+    const resQuery = buildWhere("status = 'Selesai'");
+    const resolutionRow = queryOne(`
+      SELECT AVG((julianday(updated_at) - julianday(created_at)) * 24) as avg_hours
+      FROM reports
+      ${resQuery.whereStr}
+    `, resQuery.params);
+
     // Recent reports with joined user
     let recentConds = [];
     let recentParams = [];
@@ -699,7 +706,8 @@ exports.getDashboardStats = async (req, res) => {
         pending: pendingRow?.count || 0,
         processing: processingRow?.count || 0,
         completed: completedRow?.count || 0,
-        rejected: rejectedRow?.count || 0
+        rejected: rejectedRow?.count || 0,
+        avgResolutionHours: resolutionRow?.avg_hours ? Math.round(resolutionRow.avg_hours * 10) / 10 : 0
       },
       byCategory,
       byLocation,

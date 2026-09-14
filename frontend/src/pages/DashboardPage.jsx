@@ -171,6 +171,11 @@ export const DashboardPage = () => {
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">Semua laporan telah ditindaklanjuti!</span> Tidak ada antrean tiket tertunda. Sebanyak <span className="font-bold text-blue-600 dark:text-blue-400">{processingCount} laporan</span> sedang dalam pengerjaan teknisi.
                 </>
               )}
+              {stats?.summary?.avgResolutionHours > 0 && (
+                <span className="block mt-1 pt-1 border-t border-blue-100/50 dark:border-slate-700/50">
+                  ⏱️ Rata-rata waktu penyelesaian tiket: <span className="font-bold text-slate-900 dark:text-white">{stats.summary.avgResolutionHours} Jam</span>
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -386,68 +391,146 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Baris Baru: Chart Lokasi / Ruangan Paling Banyak Komplain */}
-      <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-5 sm:p-6 shadow-xs mt-6">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+      {/* Baris Baru: Chart Lokasi & Prioritas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Ruangan Paling Banyak Komplain */}
+        <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-5 sm:p-6 shadow-xs">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Ruangan Paling Banyak Komplain
+              </h3>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                10 lokasi dengan pengaduan tertinggi
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Ruangan Paling Banyak Komplain
-            </h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              10 lokasi dengan jumlah pengaduan kerusakan tertinggi
-            </p>
+
+          <div className="h-72 w-full pt-2">
+            {stats?.byLocation && stats.byLocation.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.byLocation} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#E2E8F0'} horizontal={false} />
+                  <XAxis 
+                    type="number" 
+                    allowDecimals={false} 
+                    tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} 
+                    axisLine={{ stroke: isDark ? '#334155' : '#E2E8F0' }}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    dataKey="location" 
+                    type="category" 
+                    width={100}
+                    tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} 
+                    axisLine={{ stroke: isDark ? '#334155' : '#E2E8F0' }}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: isDark ? '#334155' : '#F1F5F9', opacity: 0.5 }}
+                    contentStyle={{
+                      backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                      borderColor: isDark ? '#334155' : '#E2E8F0',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      fontSize: '12px',
+                      color: isDark ? '#FFFFFF' : '#0F172A',
+                    }}
+                    formatter={(value) => [`${value} Komplain`, 'Jumlah']}
+                  />
+                  <Bar 
+                    dataKey="count" 
+                    fill="#EC4899" 
+                    radius={[0, 6, 6, 0]} 
+                    maxBarSize={30} 
+                    label={{ position: 'right', fill: isDark ? '#CBD5E1' : '#64748B', fontSize: 11 }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                Belum ada data lokasi pengaduan.
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="h-72 w-full pt-2">
-          {stats?.byLocation && stats.byLocation.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.byLocation} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#E2E8F0'} horizontal={false} />
-                <XAxis 
-                  type="number" 
-                  allowDecimals={false} 
-                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} 
-                  axisLine={{ stroke: isDark ? '#334155' : '#E2E8F0' }}
-                  tickLine={false}
-                />
-                <YAxis 
-                  dataKey="location" 
-                  type="category" 
-                  width={100}
-                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} 
-                  axisLine={{ stroke: isDark ? '#334155' : '#E2E8F0' }}
-                  tickLine={false}
-                />
-                <Tooltip 
-                  cursor={{ fill: isDark ? '#334155' : '#F1F5F9', opacity: 0.5 }}
-                  contentStyle={{
-                    backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
-                    borderColor: isDark ? '#334155' : '#E2E8F0',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    fontSize: '12px',
-                    color: isDark ? '#FFFFFF' : '#0F172A',
-                  }}
-                  formatter={(value) => [`${value} Komplain`, 'Jumlah']}
-                />
-                <Bar 
-                  dataKey="count" 
-                  fill="#EC4899" 
-                  radius={[0, 6, 6, 0]} 
-                  maxBarSize={30} 
-                  label={{ position: 'right', fill: isDark ? '#CBD5E1' : '#64748B', fontSize: 11 }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-slate-400">
-              Belum ada data lokasi pengaduan.
+        {/* Distribusi Tingkat Prioritas */}
+        <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-5 sm:p-6 shadow-xs">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+              <PieIcon className="h-4 w-4" />
             </div>
-          )}
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Distribusi Tingkat Prioritas
+              </h3>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                Proporsi laporan berdasarkan urgensi penanganan
+              </p>
+            </div>
+          </div>
+
+          <div className="h-72 w-full pt-2 flex flex-col">
+            <div className="flex-1">
+              {stats?.byPriority && stats.byPriority.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.byPriority}
+                      dataKey="count"
+                      nameKey="priority"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={95}
+                      paddingAngle={3}
+                    >
+                      {stats.byPriority.map((entry, index) => {
+                        const prioColor = entry.priority === 'Tinggi' ? '#EF4444' : entry.priority === 'Sedang' ? '#FACC15' : '#3B82F6';
+                        return <Cell key={`cell-prio-${index}`} fill={prioColor} />;
+                      })}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                        borderColor: isDark ? '#334155' : '#E2E8F0',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        fontSize: '12px',
+                        color: isDark ? '#FFFFFF' : '#0F172A',
+                      }}
+                      formatter={(val, name) => [`${val} Laporan`, `Prioritas ${name}`]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                  Belum ada data prioritas.
+                </div>
+              )}
+            </div>
+
+            {/* Custom Legend */}
+            {stats?.byPriority && stats.byPriority.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-[#334155] flex justify-center gap-4">
+                {stats.byPriority.map(entry => {
+                  const prioColor = entry.priority === 'Tinggi' ? '#EF4444' : entry.priority === 'Sedang' ? '#FACC15' : '#3B82F6';
+                  return (
+                    <div key={entry.priority} className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: prioColor }}></span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {entry.priority} ({entry.count})
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
