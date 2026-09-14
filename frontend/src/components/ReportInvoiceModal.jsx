@@ -39,24 +39,18 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   const handlePreparePDF = async () => {
     try {
       setIsExporting(true);
-      const element = document.getElementById('invoice-print-area');
+      // TARGET TEMPLATE BARU YANG FIXED 800px BUKAN RESPONSIVE UI
+      const element = document.getElementById('pdf-export-template');
       
       const clone = element.cloneNode(true);
-      const allElements = clone.querySelectorAll('*');
-      allElements.forEach(el => {
-        if (typeof el.className === 'string') {
-          el.className = el.className.replace(/dark:[^\s]+/g, '').trim();
-        }
-      });
-      if (typeof clone.className === 'string') {
-        clone.className = clone.className.replace(/dark:[^\s]+/g, '').trim();
-      }
 
+      // Karena template baru tidak pakai class dark, kita hapus regex class-stripping yang berat
+      // dan langsung atur style clone
       clone.style.position = 'absolute';
       clone.style.top = '0px'; 
       clone.style.left = '0px';
       clone.style.zIndex = '-9999'; 
-      clone.style.width = `${element.offsetWidth || 600}px`;
+      clone.style.width = '800px'; // Paksa ukuran A4 Desktop agar konsisten di PC dan HP
       clone.style.height = 'auto';
       clone.style.overflow = 'visible';
       clone.style.maxHeight = 'none';
@@ -180,6 +174,129 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* =========================================================================
+            HIDDEN INVOICE TEMPLATE UNTUK PDF EKSPORT SAJA (HTML2CANVAS)
+            Memaksa rasio A4 Desktop (w-[800px]) walau dibuka di HP
+        ========================================================================== */}
+        <div 
+          id="pdf-export-template" 
+          className="absolute left-[-9999px] top-[-9999px] w-[800px] bg-white p-10 text-black font-sans"
+        >
+          {/* Header */}
+          <div className="flex justify-between items-center border-b-4 border-gray-900 pb-6 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-400 text-blue-950 shadow-md font-black">
+                <Zap className="h-10 w-10 fill-blue-950 text-blue-950" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-gray-900 uppercase">
+                  Sistem Pengaduan Maintenance
+                </h2>
+                <p className="text-sm font-semibold text-gray-600">
+                  Tanda Terima Permintaan Perbaikan Fasilitas
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <h1 className="text-3xl font-black text-gray-200 uppercase tracking-widest mb-2">INVOICE</h1>
+              <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 text-blue-800 font-mono text-sm font-bold tracking-wider mb-2">
+                #{ticketNumber}
+              </span>
+              <p className="text-xs text-gray-500 flex items-center justify-end gap-1 font-medium">
+                <Calendar className="h-3.5 w-3.5" />
+                {formatDateTime(report.created_at || new Date().toISOString())}
+              </p>
+            </div>
+          </div>
+
+          {/* Status Row */}
+          <div className="flex items-center justify-between bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-8">
+            <div className="w-1/3 text-center border-r border-gray-200">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Status Tiket</span>
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200">
+                <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                {report.status || 'Menunggu Konfirmasi'}
+              </span>
+            </div>
+            <div className="w-1/3 text-center border-r border-gray-200">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Prioritas Perbaikan</span>
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-lg border bg-white border-gray-200 text-gray-800">
+                <AlertTriangle className="h-4 w-4" />
+                {report.priority || 'Sedang'}
+              </span>
+            </div>
+            <div className="w-1/3 text-center">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Kategori</span>
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-800 bg-white border border-gray-200 px-3 py-1.5 rounded-lg">
+                <Tag className="h-4 w-4 text-blue-600" />
+                {report.category}
+              </span>
+            </div>
+          </div>
+
+          {/* Content Grid */}
+          <div className="mb-6">
+            <h3 className="text-sm font-black uppercase tracking-widest text-gray-800 border-b border-gray-200 pb-2 mb-4">
+              Rincian Pelapor & Kerusakan
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                <span className="text-xs font-bold text-gray-500 block mb-1">Nama Pelapor</span>
+                <p className="font-black text-gray-900 text-lg">{report.reporter_name}</p>
+              </div>
+              <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                <span className="text-xs font-bold text-gray-500 block mb-1">Divisi / Unit Kerja</span>
+                <p className="font-black text-gray-900 text-lg">{report.division || '-'}</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 mb-4">
+              <span className="text-xs font-bold text-gray-500 block mb-1">Lokasi / Ruangan Kerusakan</span>
+              <p className="font-black text-gray-900 text-lg">{report.location}</p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+              <span className="text-xs font-bold text-gray-500 block mb-1">Barang & Detail Kerusakan</span>
+              <p className="font-black text-gray-900 text-lg mb-2">{report.item_name}</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{report.description}</p>
+            </div>
+          </div>
+
+          {/* Photo Section */}
+          {photoFullUrl && !imgError && (
+            <div className="mb-8">
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-800 border-b border-gray-200 pb-2 mb-4">
+                Foto Lampiran Kerusakan
+              </h3>
+              <div className="border-2 border-dashed border-gray-200 rounded-xl p-2 bg-gray-50 max-w-sm">
+                <img 
+                  src={photoFullUrl} 
+                  alt="Lampiran" 
+                  crossOrigin="anonymous"
+                  onError={() => setImgError(true)}
+                  className="w-full h-auto object-contain rounded-lg"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-12 border-t-2 border-gray-900 pt-6 flex justify-between items-end">
+            <div>
+              <p className="text-xs font-bold text-gray-500 mb-1">Waktu Cetak Dokumen:</p>
+              <p className="text-sm font-mono text-gray-800">{new Date().toLocaleString('id-ID')}</p>
+              <p className="text-[10px] text-gray-400 mt-2 max-w-sm">
+                Dokumen ini dihasilkan secara otomatis oleh Sistem Informasi Pengaduan Maintenance & Fasilitas. Dokumen ini sah dan dapat digunakan sebagai tanda terima permohonan perbaikan.
+              </p>
+            </div>
+            <div className="text-center">
+                <p className="text-xs font-bold text-gray-500 mb-12">Petugas / Sistem</p>
+                <p className="text-sm font-black text-gray-900 border-t border-gray-400 pt-2 inline-block px-8">Auto-Generated</p>
+            </div>
+          </div>
         </div>
 
         {/* Scrollable Printable Invoice Content */}
