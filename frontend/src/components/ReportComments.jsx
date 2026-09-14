@@ -38,7 +38,18 @@ const ReportComments = ({ reportId, currentUser, isPublic = false, onClose, clas
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const realTimeComments = snapshot.docs.map(doc => doc.data());
       if (realTimeComments.length > 0) {
-        setComments(realTimeComments);
+        setComments(prevComments => {
+          const merged = [...prevComments];
+          realTimeComments.forEach(rtc => {
+            const index = merged.findIndex(c => c.id === rtc.id);
+            if (index === -1) {
+              merged.push(rtc);
+            } else {
+              merged[index] = rtc;
+            }
+          });
+          return merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        });
       }
     }, (error) => {
       console.error("Error listening to comments:", error);
