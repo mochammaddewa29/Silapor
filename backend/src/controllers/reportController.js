@@ -1083,14 +1083,17 @@ exports.exportPDF = async (req, res) => {
     let photoBase64 = null;
     if (report.photo_url) {
       try {
-        const axios = require('axios');
         // Handle both relative (local) and absolute (cloudinary) URLs
         const url = report.photo_url.startsWith('http') 
           ? report.photo_url 
           : `${req.protocol}://${req.get('host')}${report.photo_url}`;
         
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
-        photoBase64 = `data:${response.headers['content-type']};base64,${Buffer.from(response.data, 'binary').toString('base64')}`;
+        const response = await fetch(url);
+        if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            const contentType = response.headers.get('content-type') || 'image/jpeg';
+            photoBase64 = `data:${contentType};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+        }
       } catch(e) {
         console.error('Failed to load image for PDF:', e.message);
       }

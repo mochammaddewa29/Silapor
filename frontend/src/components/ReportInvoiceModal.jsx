@@ -42,10 +42,14 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       
       const response = await fetch(apiUrl);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMsg = errorData && errorData.error ? errorData.error : 'Gagal mengunduh PDF dari server';
-        console.error('Server error response:', errorData);
-        throw new Error(errorMsg);
+        const textData = await response.text();
+        console.error('Server error response text:', textData);
+        try {
+           const json = JSON.parse(textData);
+           throw new Error(json.error || 'Server error');
+        } catch(e) {
+           throw new Error('Vercel Crash: ' + textData.substring(0, 100));
+        }
       }
       
       const blob = await response.blob();
