@@ -186,7 +186,8 @@ export const ReportHistoryPage = () => {
           </div>
         </div>
       ) : reports.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {reports.map((report) => {
             const photoUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
             const ticketNumber = `TKT-${String(report.id || '').padStart(5, '0')}`;
@@ -298,7 +299,7 @@ export const ReportHistoryPage = () => {
             </button>
           </div>
         )}
-      </div>
+        </>
       ) : (
         /* Empty State */
         <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-12 text-center shadow-xs">
