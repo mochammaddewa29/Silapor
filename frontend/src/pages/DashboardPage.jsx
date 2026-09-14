@@ -171,11 +171,6 @@ export const DashboardPage = () => {
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">Semua laporan telah ditindaklanjuti!</span> Tidak ada antrean tiket tertunda. Sebanyak <span className="font-bold text-blue-600 dark:text-blue-400">{processingCount} laporan</span> sedang dalam pengerjaan teknisi.
                 </>
               )}
-              {stats?.summary?.avgResolutionHours > 0 && (
-                <span className="block mt-1 pt-1 border-t border-blue-100/50 dark:border-slate-700/50">
-                  ⏱️ Rata-rata waktu penyelesaian tiket: <span className="font-bold text-slate-900 dark:text-white">{stats.summary.avgResolutionHours} Jam</span>
-                </span>
-              )}
             </p>
           </div>
         </div>
