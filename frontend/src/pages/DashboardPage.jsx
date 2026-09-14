@@ -90,8 +90,8 @@ export const DashboardPage = () => {
   // Format monthly trend data for chart
   const formattedMonthly = (stats?.byMonth || []).map((item) => {
     const parts = (item.month || '').split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    const label = parts.length === 2 ? `${monthNames[parseInt(parts[1], 10) - 1]} ${parts[0].slice(2)}` : item.month;
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const label = parts.length === 2 ? `${monthNames[parseInt(parts[1], 10) - 1]} ${parts[0]}` : item.month;
     return {
       ...item,
       label,
@@ -485,7 +485,13 @@ export const DashboardPage = () => {
                       paddingAngle={3}
                     >
                       {stats.byPriority.map((entry, index) => {
-                        const prioColor = entry.priority === 'Tinggi' ? '#EF4444' : entry.priority === 'Sedang' ? '#FACC15' : '#3B82F6';
+                        let prioColor = '#94A3B8'; // Default slate
+                        const prioStr = (entry.priority || '').toLowerCase();
+                        if (prioStr.includes('kritis')) prioColor = '#EF4444'; // Red
+                        else if (prioStr.includes('tinggi')) prioColor = '#F97316'; // Orange
+                        else if (prioStr.includes('sedang')) prioColor = '#F59E0B'; // Amber
+                        else if (prioStr.includes('rendah')) prioColor = '#10B981'; // Green
+                        
                         return <Cell key={`cell-prio-${index}`} fill={prioColor} />;
                       })}
                     </Pie>
@@ -513,7 +519,13 @@ export const DashboardPage = () => {
             {stats?.byPriority && stats.byPriority.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-[#334155] flex justify-center gap-4">
                 {stats.byPriority.map(entry => {
-                  const prioColor = entry.priority === 'Tinggi' ? '#EF4444' : entry.priority === 'Sedang' ? '#FACC15' : '#3B82F6';
+                  let prioColor = '#94A3B8';
+                  const prioStr = (entry.priority || '').toLowerCase();
+                  if (prioStr.includes('kritis')) prioColor = '#EF4444'; // Red
+                  else if (prioStr.includes('tinggi')) prioColor = '#F97316'; // Orange
+                  else if (prioStr.includes('sedang')) prioColor = '#F59E0B'; // Amber
+                  else if (prioStr.includes('rendah')) prioColor = '#10B981'; // Green
+                  
                   return (
                     <div key={entry.priority} className="flex items-center gap-1.5">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: prioColor }}></span>
