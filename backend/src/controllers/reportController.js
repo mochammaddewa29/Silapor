@@ -1255,6 +1255,6 @@ exports.exportPDF = async (req, res) => {
 
   } catch (err) {
     console.error('Error generating PDF with pdfmake:', err);
-    res.status(500).json({ error: 'Gagal membuat PDF di server.' });
+    res.status(500).json({ error: 'Gagal membuat PDF di server: ' + err.message });
   }
 };
