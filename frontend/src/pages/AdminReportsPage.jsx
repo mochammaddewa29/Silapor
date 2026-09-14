@@ -218,8 +218,9 @@ export const AdminReportsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteReport = async (reportId, itemName) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus laporan "${itemName}" (#TKT-${String(reportId || '').padStart(5, '0')})?\n\nLaporan ini akan dihapus permanen. Jika pelapor tidak memiliki laporan lain, akun pelapor juga akan otomatis dibersihkan.`)) {
+  const handleDeleteReport = async (reportId, itemName, ticketNumber) => {
+    const displayTicket = ticketNumber || `#TKT-${String(reportId || '').padStart(5, '0')}`;
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus laporan "${itemName}" (${displayTicket})?\n\nLaporan ini akan dihapus permanen. Jika pelapor tidak memiliki laporan lain, akun pelapor juga akan otomatis dibersihkan.`)) {
       return;
     }
     try {
@@ -485,7 +486,7 @@ export const AdminReportsPage = () => {
                           {report.location}
                         </p>
                         <span className="font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                          #TKT-{String(report.id || '').padStart(5, '0')}
+                          {report.ticket_number || `#TKT-${String(report.id || '').padStart(5, '0')}`}
                         </span>
                       </td>
 
@@ -532,7 +533,7 @@ export const AdminReportsPage = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteReport(report.id, report.item_name)}
+                            onClick={() => handleDeleteReport(report.id, report.item_name, report.ticket_number)}
                             className="inline-flex items-center justify-center rounded-xl p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all duration-150 hover:scale-110"
                             title="Hapus Laporan Permanen"
                           >
@@ -554,7 +555,7 @@ export const AdminReportsPage = () => {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200/60 dark:border-blue-900/60">
-                        #TKT-{String(report.id || '').padStart(5, '0')}
+                        {report.ticket_number || `#TKT-${String(report.id || '').padStart(5, '0')}`}
                       </span>
                       <span className="text-[11px] text-slate-400 dark:text-slate-500">
                         {formatDate(report.created_at)}

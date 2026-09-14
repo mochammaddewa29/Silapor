@@ -10,6 +10,12 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 const { getLocalDateTime } = require('../utils/time');
 
+// Helper to generate random ticket number
+const generateTicketNumber = () => {
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `TKT-${randomStr}`;
+};
+
 // Direct Report (creates user on the fly, creates report, returns JWT + report)
 exports.directReport = async (req, res) => {
   try {
@@ -61,10 +67,11 @@ exports.directReport = async (req, res) => {
     }
 
     const now = getLocalDateTime();
+    const ticketNumber = generateTicketNumber();
     const result = runQuery(
-      `INSERT INTO reports (user_id, reporter_name, division, location, category, item_name, description, photo_url, priority, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Menunggu', ?, ?)`,
-      [user.id, reporter_name, division || 'Umum', location, reportCategory, item_name, description, photo_url, reportPriority, now, now]
+      `INSERT INTO reports (ticket_number, user_id, reporter_name, division, location, category, item_name, description, photo_url, priority, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Menunggu', ?, ?)`,
+      [ticketNumber, user.id, reporter_name, division || 'Umum', location, reportCategory, item_name, description, photo_url, reportPriority, now, now]
     );
 
     const report = queryOne('SELECT * FROM reports WHERE id = ?', [result.lastInsertRowid]);
@@ -235,10 +242,11 @@ exports.createReport = async (req, res) => {
     }
 
     const now = getLocalDateTime();
+    const ticketNumber = generateTicketNumber();
     const result = runQuery(
-      `INSERT INTO reports (user_id, reporter_name, division, location, category, item_name, description, photo_url, priority, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Menunggu', ?, ?)`,
-      [req.user.id, reporter_name, division || '', location, category, item_name, description, photo_url, reportPriority, now, now]
+      `INSERT INTO reports (ticket_number, user_id, reporter_name, division, location, category, item_name, description, photo_url, priority, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Menunggu', ?, ?)`,
+      [ticketNumber, req.user.id, reporter_name, division || '', location, category, item_name, description, photo_url, reportPriority, now, now]
     );
 
     const report = queryOne('SELECT * FROM reports WHERE id = ?', [result.lastInsertRowid]);
@@ -370,20 +378,30 @@ exports.trackReport = async (req, res) => {
       return res.status(400).json({ error: 'Nomor tiket wajib diisi.' });
     }
 
-    // Extract numerical ID from string (e.g. "TKT-00012" -> 12, or "12" -> 12)
-    const cleanId = parseInt(String(ticketId).replace(/\D/g, ''), 10);
-    if (isNaN(cleanId) || cleanId <= 0) {
-      return res.status(400).json({ error: 'Format nomor tiket tidak valid. Contoh: #TKT-00012 atau 12.' });
-    }
-
-    const report = queryOne(
-      `SELECT r.id, r.reporter_name, r.division, r.location, r.category, r.item_name, 
+    // Coba cari dari ticket_number dulu (case insensitive)
+    let report = queryOne(
+      `SELECT r.id, r.ticket_number, r.reporter_name, r.division, r.location, r.category, r.item_name, 
               r.description, r.photo_url, r.priority, r.status, r.technician, 
               r.repair_notes, r.created_at, r.updated_at
        FROM reports r
-       WHERE r.id = ?`,
-      [cleanId]
+       WHERE LOWER(r.ticket_number) = ? OR LOWER(r.ticket_number) = ?`,
+      [ticketId.toLowerCase(), `tkt-${ticketId.toLowerCase()}`]
     );
+
+    if (!report) {
+      // Extract numerical ID from string (e.g. "TKT-00012" -> 12, or "12" -> 12) fallback
+      const cleanId = parseInt(String(ticketId).replace(/\D/g, ''), 10);
+      if (!isNaN(cleanId) && cleanId > 0) {
+        report = queryOne(
+          `SELECT r.id, r.ticket_number, r.reporter_name, r.division, r.location, r.category, r.item_name, 
+                  r.description, r.photo_url, r.priority, r.status, r.technician, 
+                  r.repair_notes, r.created_at, r.updated_at
+           FROM reports r
+           WHERE r.id = ?`,
+          [cleanId]
+        );
+      }
+    }
 
     if (!report) {
       return res.status(404).json({ 

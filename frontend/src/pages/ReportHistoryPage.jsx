@@ -190,7 +190,7 @@ export const ReportHistoryPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {reports.map((report) => {
             const photoUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
-            const ticketNumber = `TKT-${String(report.id || '').padStart(5, '0')}`;
+            const ticketNumber = report.ticket_number || `TKT-${String(report.id || '').padStart(5, '0')}`;
 
             return (
               <div

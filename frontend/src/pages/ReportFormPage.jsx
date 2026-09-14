@@ -166,7 +166,7 @@ export const ReportFormPage = () => {
                 Nomor Invoice / Tiket Resmi Anda:
               </span>
               <span className="font-mono text-xl font-black text-blue-700 dark:text-amber-400 tracking-wider">
-                #TKT-{String(submittedReport?.id || '').padStart(5, '0')}
+                {submittedReport?.ticket_number || `#TKT-${String(submittedReport?.id || '').padStart(5, '0')}`}
               </span>
             </div>
 

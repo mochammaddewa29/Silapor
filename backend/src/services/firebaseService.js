@@ -51,6 +51,7 @@ async function syncReportToFirebase(report) {
     const reportDocRef = doc(db, 'reports', String(report.id));
     const dataToSave = {
       id: report.id,
+      ticket_number: report.ticket_number || null,
       user_id: report.user_id,
       reporter_name: report.reporter_name,
       division: report.division || '',

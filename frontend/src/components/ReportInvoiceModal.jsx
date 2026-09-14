@@ -27,7 +27,7 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
     setImgError(false);
   }, [report?.id, report?.photo_url]);
 
-  const ticketNumber = `TKT-${String(report.id || '').padStart(5, '0')}`;
+  const ticketNumber = report?.ticket_number || `TKT-${String(report?.id || '').padStart(5, '0')}`;
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
   const handlePrint = () => {

@@ -36,6 +36,7 @@ async function initDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticket_number TEXT UNIQUE,
       user_id INTEGER NOT NULL,
       reporter_name TEXT NOT NULL,
       division TEXT,
@@ -84,6 +85,12 @@ async function initDatabase() {
 
   try {
     db.run("ALTER TABLE reports ADD COLUMN division TEXT");
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.run("ALTER TABLE reports ADD COLUMN ticket_number TEXT UNIQUE");
   } catch (e) {
     // Column already exists
   }
@@ -182,12 +189,13 @@ async function syncFromCloud(force = false) {
           if (!r.id) continue;
           db.run(`
             INSERT OR REPLACE INTO reports (
-              id, user_id, reporter_name, division, location, category, 
+              id, ticket_number, user_id, reporter_name, division, location, category, 
               item_name, description, photo_url, priority, status, 
               technician, repair_notes, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             r.id, 
+            r.ticket_number || null,
             r.user_id || 1, 
             r.reporter_name || 'Anonim', 
             r.division || '', 

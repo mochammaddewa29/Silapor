@@ -95,7 +95,7 @@ export const exportReportsToPDF = (reports = [], filters = {}) => {
 
   // Table Body Rows
   const tableRows = reports.map((r, idx) => {
-    const ticketId = `#TKT-${String(r.id || '').padStart(5, '0')}`;
+    const ticketId = r.ticket_number || `#TKT-${String(r.id || '').padStart(5, '0')}`;
     const dateStr = r.created_at ? formatDate(r.created_at) : '-';
     return [
       idx + 1,

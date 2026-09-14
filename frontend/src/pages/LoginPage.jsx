@@ -424,6 +424,17 @@ export const LoginPage = () => {
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
                     {categories.map((cat) => {
+                      // Pengecekan jika input formatnya string ID atau Integer
+      let ticketData = null;
+      if (isNaN(cleanInput)) {
+        // Cari dari tiket acak: cocokkan dengan string (case insensitive)
+        ticketData = data.find(t => t.ticket_number && t.ticket_number.toLowerCase() === `tkt-${cleanInput.toLowerCase()}` || t.ticket_number?.toLowerCase() === cleanInput.toLowerCase());
+      } 
+      
+      if (!ticketData) {
+        // Fallback: Cari dari integer id
+        ticketData = data.find(t => String(t.id) === cleanInput || `#TKT-${String(t.id).padStart(5, '0')}` === rawInput);
+      }
                       const Icon = cat.icon;
                       const isLainnya = cat.name === 'Lainnya';
                       const isSelected = isLainnya
@@ -645,7 +656,7 @@ export const LoginPage = () => {
                   <div className="rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/70 p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-[#334155] pb-2.5">
                       <span className="font-mono text-xs font-bold text-[#1E88E5] dark:text-blue-400">
-                        #TKT-{String(trackedReport.id || '').padStart(5, '0')}
+                        {trackedReport.ticket_number || `#TKT-${String(trackedReport.id || '').padStart(5, '0')}`}
                       </span>
                       <StatusBadge status={trackedReport.status} size="sm" />
                     </div>

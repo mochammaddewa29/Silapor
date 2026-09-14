@@ -79,7 +79,7 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
   };
 
   const photoFullUrl = getImageUrl(report.photo_url);
-  const ticketNumber = `TKT-${String(report.id || '').padStart(5, '0')}`;
+  const ticketNumber = report.ticket_number || `TKT-${String(report.id || '').padStart(5, '0')}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm transition-opacity">

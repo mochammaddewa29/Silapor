@@ -70,7 +70,7 @@ const GlobalChatWidget = () => {
               </h3>
               {activeReportId && (
                 <span className="text-[10px] font-mono text-blue-100 block">
-                  #TKT-{String(activeReportId).padStart(5, '0')}
+                  {reports.find(r => r.id === activeReportId)?.ticket_number || `#TKT-${String(activeReportId).padStart(5, '0')}`}
                 </span>
               )}
             </div>
@@ -111,7 +111,7 @@ const GlobalChatWidget = () => {
                     .map(report => {
                       const unread = unreadCounts[report.id] || 0;
                       const latestMsg = latestMessages[report.id];
-                      const ticketNumber = `TKT-${String(report.id).padStart(5, '0')}`;
+                      const ticketNumber = report.ticket_number || `TKT-${String(report.id).padStart(5, '0')}`;
                     
                     return (
                       <button
