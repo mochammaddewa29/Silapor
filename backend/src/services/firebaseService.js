@@ -140,8 +140,8 @@ async function getReportsFromFirebase() {
     const snapshot = await withTimeout(getDocs(collection(db, 'reports')), 5000);
     return snapshot.docs.map(d => d.data());
   } catch (err) {
-    console.warn('[Firestore Notice] Gagal mengambil laporan dari Firestore:', err.message);
-    return [];
+    console.warn('[Firestore Notice] Gagal mengambil laporan dari Firestore (kemungkinan timeout):', err.message);
+    return null; // Return null instead of [] to prevent wiping SQLite
   }
 }
 
@@ -154,7 +154,7 @@ async function getUsersFromFirebase() {
     return snapshot.docs.map(d => d.data());
   } catch (err) {
     console.warn('[Firestore Notice] Gagal mengambil users dari Firestore:', err.message);
-    return [];
+    return null; // Return null instead of []
   }
 }
 
