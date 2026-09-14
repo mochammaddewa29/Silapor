@@ -169,10 +169,8 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
             </div>
           </div>
 
-          {/* Real-time Comments / Live Chat */}
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-            <ReportComments reportId={report.id} currentUser={user} />
-          </div>
+          {/* Real-time Comments / Live Chat (Floating) */}
+          <ReportComments reportId={report.id} currentUser={user} />
 
           {/* If NOT Admin: Show technician and notes as read-only */}
           {!isAdmin && (
