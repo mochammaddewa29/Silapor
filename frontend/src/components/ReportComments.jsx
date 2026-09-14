@@ -3,11 +3,14 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { reportsAPI } from '../services/api';
 
-const ReportComments = ({ reportId, currentUser, isPublic = false, onClose, className = "h-[350px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-inner" }) => {
+const ReportComments = ({ reportId, reportStatus, currentUser, isPublic = false, onClose, className = "h-[350px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-inner" }) => {
   const [comments, setComments] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const commentsEndRef = useRef(null);
+
+  // Cek apakah chat harus dikunci (disabled)
+  const isChatDisabled = reportStatus === 'Selesai' || reportStatus === 'Ditolak';
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -138,34 +141,42 @@ const ReportComments = ({ reportId, currentUser, isPublic = false, onClose, clas
         <div ref={commentsEndRef} />
           </div>
 
-          <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3">
-            <form onSubmit={handleSendMessage} className="flex gap-2">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Ketik pesan..."
-                className="flex-1 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-                disabled={isSubmitting}
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim() || isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1.5 w-9 h-9 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              >
-                {isSubmitting ? (
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                )}
-              </button>
-            </form>
-          </div>
+          {isChatDisabled ? (
+            <div className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                Obrolan ditutup karena tiket telah {reportStatus.toLowerCase()}.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3">
+              <form onSubmit={handleSendMessage} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Ketik pesan..."
+                  className="flex-1 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim() || isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1.5 w-9 h-9 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  {isSubmitting ? (
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
     </div>
   );
 };

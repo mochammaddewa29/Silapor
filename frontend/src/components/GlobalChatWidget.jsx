@@ -164,7 +164,12 @@ const GlobalChatWidget = () => {
             )
           ) : (
             /* --- CHAT VIEW --- */
-            <ReportComments reportId={activeReportId} currentUser={user} className="h-full" />
+            <ReportComments 
+              reportId={activeReportId} 
+              reportStatus={reports.find(r => r.id === activeReportId)?.status}
+              currentUser={user} 
+              className="h-full" 
+            />
           )}
         </div>
       </div>

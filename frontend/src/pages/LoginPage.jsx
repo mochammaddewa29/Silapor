@@ -664,7 +664,12 @@ export const LoginPage = () => {
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#334155]">
-                      <ReportComments reportId={trackedReport.id} isPublic={true} currentUser={{ id: trackedReport.user_id || 0 }} />
+                      <ReportComments 
+                        reportId={trackedReport.id} 
+                        reportStatus={trackedReport.status}
+                        isPublic={true} 
+                        currentUser={{ id: trackedReport.user_id || 0 }} 
+                      />
                     </div>
 
                     <button
