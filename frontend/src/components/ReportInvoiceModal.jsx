@@ -249,16 +249,32 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
 
   const handleMobileDownload = async () => {
     if (!pdfReadyData) return;
-    const { blobUrl, fileName } = pdfReadyData;
+    const { file, blobUrl, fileName } = pdfReadyData;
 
+    try {
+      // 1. Coba gunakan Web Share API (Sangat handal di HP Android/iOS)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Invoice Laporan Maintenance',
+          text: 'Tanda Terima Laporan Maintenance'
+        });
+        setPdfReadyData(null);
+        return;
+      }
+    } catch (err) {
+      console.log('Share API dibatalkan atau gagal:', err);
+      // Lanjut ke fallback jika dibatalkan/gagal tapi bukan karena tidak support
+    }
+
+    // 2. Fallback untuk browser yang tidak support Web Share
     const isSafari = navigator.userAgent.match(/(iPod|iPhone|iPad|Safari)/i) && !navigator.userAgent.match(/Chrome/i);
-
+    
     if (isSafari) {
-      // 3. Safari Fix Fallback:
-      // Karena iOS Safari kadang memblokir <a download> atau share API
-      window.location.href = blobUrl;
+      // Safari iOS lebih suka membuka tab baru atau window.location untuk Blob
+      window.open(blobUrl, '_blank');
     } else {
-      // 1. Frontend: Pakai <a download> trigger via JS
+      // Browser lain (Android Chrome dll)
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = fileName;
