@@ -61,6 +61,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
             icon: FileText,
           },
         ]),
+    {
+      to: '/profil',
+      label: 'Profil Pengguna',
+      description: 'Pengaturan Akun',
+      icon: User,
+    }
   ];
 
   const sidebarContent = (

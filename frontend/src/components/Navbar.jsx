@@ -77,7 +77,11 @@ export const Navbar = ({ onOpenSidebar }) => {
         </button>
 
         {/* User Pill */}
-        <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/90 px-2 sm:px-3 py-1 sm:py-1.5 dark:border-gray-700 dark:bg-gray-800/90">
+        <button 
+          onClick={() => navigate('/profil')}
+          title="Ke Profil Pengguna"
+          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/90 hover:bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 dark:border-gray-700 dark:bg-gray-800/90 dark:hover:bg-gray-700/90 transition-colors cursor-pointer"
+        >
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shrink-0">
             {user?.full_name?.charAt(0) || 'U'}
           </div>
@@ -89,7 +93,7 @@ export const Navbar = ({ onOpenSidebar }) => {
               {isAdmin ? 'Administrator' : 'Pelapor'}
             </p>
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );

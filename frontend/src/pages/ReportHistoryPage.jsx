@@ -29,6 +29,11 @@ export const ReportHistoryPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  
   // Selected report for invoice / detail modal
   const [selectedReport, setSelectedReport] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
@@ -44,9 +49,14 @@ export const ReportHistoryPage = () => {
       if (statusFilter) params.status = statusFilter;
       if (categoryFilter) params.category = categoryFilter;
       if (searchQuery) params.search = searchQuery;
+      params.page = currentPage;
+      params.limit = ITEMS_PER_PAGE;
 
       const data = await reportsAPI.getAll(params);
       setReports(data.reports || []);
+      if (data.pagination) {
+        setTotalPages(data.pagination.totalPages || 1);
+      }
     } catch (err) {
       console.error('Fetch reports error:', err);
       setError('Gagal memuat riwayat pengaduan.');
@@ -57,11 +67,22 @@ export const ReportHistoryPage = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [statusFilter, categoryFilter]);
+  }, [statusFilter, categoryFilter, currentPage]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    setCurrentPage(1); // Reset page on search
     fetchReports();
+  };
+
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryFilter = (e) => {
+    setCategoryFilter(e.target.value);
+    setCurrentPage(1);
   };
 
   const handleOpenInvoice = (report) => {
@@ -105,7 +126,7 @@ export const ReportHistoryPage = () => {
             ].map((pill) => (
               <button
                 key={pill.value}
-                onClick={() => setStatusFilter(pill.value)}
+                onClick={() => handleStatusFilter(pill.value)}
                 className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 ${
                   statusFilter === pill.value
                     ? 'bg-[#2563EB] text-white shadow-xs'
@@ -132,8 +153,8 @@ export const ReportHistoryPage = () => {
 
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full sm:w-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 px-3 py-2 text-base sm:text-xs text-slate-800 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
+              onChange={handleCategoryFilter}
+              className="rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-800/50 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             >
               <option value="">Semua Kategori</option>
               <option value="Elektronik">Elektronik</option>
@@ -242,6 +263,42 @@ export const ReportHistoryPage = () => {
             );
           })}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              Prev
+            </button>
+            <div className="flex items-center gap-1">
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
+                    currentPage === i + 1
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
       ) : (
         /* Empty State */
         <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-12 text-center shadow-xs">

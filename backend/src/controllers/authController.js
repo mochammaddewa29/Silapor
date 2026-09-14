@@ -35,7 +35,7 @@ exports.register = async (req, res) => {
       [username, hashedPassword, full_name, userRole, now]
     );
 
-    const user = queryOne('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?', [result.lastInsertRowid]);
+    const user = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [result.lastInsertRowid]);
     
     // Sinkronkan data user ke Firebase Cloud Firestore
     const { syncUserToFirebase } = require('../services/firebaseService');
@@ -90,7 +90,7 @@ exports.login = (req, res) => {
 // Get current user profile
 exports.getMe = (req, res) => {
   try {
-    const user = queryOne('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?', [req.user.id]);
+    const user = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [req.user.id]);
     if (!user) {
       return res.status(404).json({ error: 'User tidak ditemukan.' });
     }
@@ -98,5 +98,65 @@ exports.getMe = (req, res) => {
   } catch (err) {
     console.error('GetMe error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+};
+
+// Update user profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const { full_name, current_password, new_password, photo_url } = req.body;
+    const userId = req.user.id;
+
+    const user = queryOne('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User tidak ditemukan.' });
+    }
+
+    let updates = [];
+    let params = [];
+
+    if (full_name && full_name.trim() !== '') {
+      updates.push('full_name = ?');
+      params.push(full_name.trim());
+    }
+
+    if (photo_url !== undefined) {
+      updates.push('photo_url = ?');
+      params.push(photo_url);
+    }
+
+    if (new_password) {
+      if (!current_password) {
+        return res.status(400).json({ error: 'Password saat ini harus diisi untuk mengubah password.' });
+      }
+      const validPassword = bcrypt.compareSync(current_password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Password saat ini salah.' });
+      }
+      if (new_password.length < 6) {
+        return res.status(400).json({ error: 'Password baru minimal 6 karakter.' });
+      }
+      const hashedPassword = bcrypt.hashSync(new_password, 10);
+      updates.push('password = ?');
+      params.push(hashedPassword);
+    }
+
+    if (updates.length === 0) {
+      return res.json({ message: 'Tidak ada data yang diubah.' });
+    }
+
+    params.push(userId);
+    runQuery(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const updatedUser = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [userId]);
+    
+    // Sync to Firebase
+    const { syncUserToFirebase } = require('../services/firebaseService');
+    await syncUserToFirebase(updatedUser);
+
+    res.json({ message: 'Profil berhasil diperbarui.', user: updatedUser });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat memperbarui profil.' });
   }
 };

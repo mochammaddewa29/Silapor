@@ -27,6 +27,7 @@ async function initDatabase() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       full_name TEXT NOT NULL,
+      photo_url TEXT,
       role TEXT NOT NULL DEFAULT 'user',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -87,6 +88,12 @@ async function initDatabase() {
     // Column already exists
   }
 
+  try {
+    db.run("ALTER TABLE users ADD COLUMN photo_url TEXT");
+  } catch (e) {
+    // Column already exists
+  }
+
   // Hydrate data dari Cloud Firestore jika tersedia (mencegah data hilang saat serverless deploy / restart)
   await syncFromCloud(true);
 
@@ -98,14 +105,15 @@ async function initDatabase() {
         if (!u.id || !u.username) continue;
         db.run(`
           INSERT OR IGNORE INTO users (
-            id, username, password, full_name, role, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?)
+            id, username, password, full_name, role, photo_url, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
           u.id,
           u.username,
           u.password || '$2a$10$defaultPasswordPlaceholderHash',
           u.full_name || u.username,
           u.role || 'user',
+          u.photo_url || null,
           u.created_at || new Date().toISOString()
         ]);
       }

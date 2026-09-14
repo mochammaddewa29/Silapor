@@ -42,6 +42,11 @@ export const AdminReportsPage = () => {
   const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  
   // Modal & Edit State
   const [selectedReport, setSelectedReport] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,9 +65,14 @@ export const AdminReportsPage = () => {
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
       if (searchQuery) params.search = searchQuery;
+      params.page = currentPage;
+      params.limit = ITEMS_PER_PAGE;
 
       const data = await reportsAPI.getAll(params);
       setReports(data.reports || []);
+      if (data.pagination) {
+        setTotalPages(data.pagination.totalPages || 1);
+      }
     } catch (err) {
       console.error('Fetch all reports error:', err);
       setError('Gagal memuat data pengaduan.');
@@ -73,7 +83,7 @@ export const AdminReportsPage = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [statusFilter, categoryFilter, priorityFilter, startDate, endDate]);
+  }, [statusFilter, categoryFilter, priorityFilter, startDate, endDate, currentPage]);
 
   // Auto-refresh data laporan setiap 20 detik secara halus
   useEffect(() => {
@@ -86,6 +96,8 @@ export const AdminReportsPage = () => {
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
         if (searchQuery) params.search = searchQuery;
+        params.page = currentPage;
+        params.limit = ITEMS_PER_PAGE;
         reportsAPI.getAll(params)
           .then((data) => {
             if (data?.reports) setReports(data.reports);
@@ -94,10 +106,11 @@ export const AdminReportsPage = () => {
       }
     }, 20000);
     return () => clearInterval(interval);
-  }, [statusFilter, categoryFilter, priorityFilter, startDate, endDate, searchQuery, isModalOpen, updatingId]);
+  }, [statusFilter, categoryFilter, priorityFilter, startDate, endDate, searchQuery, isModalOpen, updatingId, currentPage]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    setCurrentPage(1); // Reset page on search
     fetchReports();
   };
 
@@ -108,6 +121,7 @@ export const AdminReportsPage = () => {
     setStartDate('');
     setEndDate('');
     setSearchQuery('');
+    setCurrentPage(1);
   };
 
   const activeFilterCount = [
@@ -618,6 +632,41 @@ export const AdminReportsPage = () => {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  Prev
+                </button>
+                <div className="flex items-center gap-1">
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
+                        currentPage === i + 1
+                          ? 'bg-blue-600 text-white'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </>
         ) : (
           /* Empty State */

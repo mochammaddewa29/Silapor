@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import ReportFormPage from './pages/ReportFormPage';
 import ReportHistoryPage from './pages/ReportHistoryPage';
 import AdminReportsPage from './pages/AdminReportsPage';
+import ProfilePage from './pages/ProfilePage';
 
 export const App = () => {
   return (
@@ -29,6 +30,7 @@ export const App = () => {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="lapor" element={<ReportFormPage />} />
         <Route path="riwayat" element={<ReportHistoryPage />} />
+        <Route path="profil" element={<ProfilePage />} />
         
         {/* Admin Only Route */}
         <Route
