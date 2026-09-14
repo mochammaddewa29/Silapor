@@ -49,6 +49,18 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       
       // Clone element ke body agar tidak terpotong oleh overflow parent (Solusi PDF Putih/Blank)
       const clone = element.cloneNode(true);
+      
+      // HAPUS SEMUA CLASS DARK MODE AGAR TEKS TERLIHAT JELAS PADA PDF (TIDAK PUTIH PADA PUTIH)
+      const allElements = clone.querySelectorAll('*');
+      allElements.forEach(el => {
+        if (typeof el.className === 'string') {
+          el.className = el.className.replace(/dark:[^\s]+/g, '').trim();
+        }
+      });
+      if (typeof clone.className === 'string') {
+        clone.className = clone.className.replace(/dark:[^\s]+/g, '').trim();
+      }
+
       clone.style.position = 'absolute';
       clone.style.top = '0px'; // JANGAN gunakan -9999px karena html2canvas bisa mengabaikan elemen di luar viewport
       clone.style.left = '0px';
