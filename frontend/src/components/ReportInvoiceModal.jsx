@@ -35,14 +35,6 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
   const handlePrint = async () => {
-    // Buka tab sinkron di awal khusus Safari untuk mencegah blokir popup (Apple block async window.open)
-    const isSafari = navigator.userAgent.match(/(iPod|iPhone|iPad|Safari)/i) && !navigator.userAgent.match(/Chrome/i);
-    let newTab = null;
-    if (isSafari) {
-      newTab = window.open('', '_blank');
-      if (newTab) newTab.document.write('<div style="font-family:sans-serif;padding:20px;text-align:center;">Sedang memproses dokumen PDF... Mohon tunggu sebentar.</div>');
-    }
-
     try {
       setIsExporting(true);
       const element = document.getElementById('invoice-print-area');
@@ -50,7 +42,7 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       // Clone element ke body agar tidak terpotong oleh overflow parent (Solusi PDF Putih/Blank)
       const clone = element.cloneNode(true);
       
-      // HAPUS SEMUA CLASS DARK MODE AGAR TEKS TERLIHAT JELAS PADA PDF (TIDAK PUTIH PADA PUTIH)
+      // HAPUS SEMUA CLASS DARK MODE AGAR TEKS TERLIHAT JELAS PADA PDF
       const allElements = clone.querySelectorAll('*');
       allElements.forEach(el => {
         if (typeof el.className === 'string') {
@@ -62,9 +54,9 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       }
 
       clone.style.position = 'absolute';
-      clone.style.top = '0px'; // JANGAN gunakan -9999px karena html2canvas bisa mengabaikan elemen di luar viewport
+      clone.style.top = '0px'; 
       clone.style.left = '0px';
-      clone.style.zIndex = '-9999'; // Sembunyikan di belakang elemen lain
+      clone.style.zIndex = '-9999'; 
       clone.style.width = `${element.offsetWidth || 600}px`;
       clone.style.height = 'auto';
       clone.style.overflow = 'visible';
@@ -97,15 +89,37 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       
-      if (isSafari && newTab) {
-        newTab.location.href = pdf.output('bloburl');
-      } else {
-        pdf.save(`Invoice_Laporan_${ticketNumber}.pdf`);
-        if (newTab) newTab.close();
+      const fileName = `Invoice_Laporan_${ticketNumber}.pdf`;
+
+      // Coba gunakan Web Share API khusus untuk pengguna HP (iOS Safari / Android)
+      const isMobile = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
+      let shared = false;
+
+      if (isMobile && navigator.canShare) {
+        try {
+          const blob = pdf.output('blob');
+          const file = new File([blob], fileName, { type: 'application/pdf' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: fileName,
+              text: 'Tanda Terima Pengaduan Fasilitas'
+            });
+            shared = true;
+          }
+        } catch (shareErr) {
+          console.log('Share dibatalkan user atau gagal', shareErr);
+        }
       }
+      
+      // Jika bukan HP atau share gagal/dibatalkan, gunakan fungsi save otomatis (download)
+      if (!shared) {
+        pdf.save(fileName);
+      }
+      
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
-      if (newTab) newTab.close();
+      // Fallback paling akhir
       window.print();
     } finally {
       setIsExporting(false);
