@@ -35,6 +35,14 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
   const handlePrint = async () => {
+    // Buka tab sinkron di awal khusus Safari untuk mencegah blokir popup (Apple block async window.open)
+    const isSafari = navigator.userAgent.match(/(iPod|iPhone|iPad|Safari)/i) && !navigator.userAgent.match(/Chrome/i);
+    let newTab = null;
+    if (isSafari) {
+      newTab = window.open('', '_blank');
+      if (newTab) newTab.document.write('<div style="font-family:sans-serif;padding:20px;text-align:center;">Sedang memproses dokumen PDF... Mohon tunggu sebentar.</div>');
+    }
+
     try {
       setIsExporting(true);
       const element = document.getElementById('invoice-print-area');
@@ -42,8 +50,9 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       // Clone element ke body agar tidak terpotong oleh overflow parent (Solusi PDF Putih/Blank)
       const clone = element.cloneNode(true);
       clone.style.position = 'absolute';
-      clone.style.top = '-9999px';
-      clone.style.left = '-9999px';
+      clone.style.top = '0px'; // JANGAN gunakan -9999px karena html2canvas bisa mengabaikan elemen di luar viewport
+      clone.style.left = '0px';
+      clone.style.zIndex = '-9999'; // Sembunyikan di belakang elemen lain
       clone.style.width = `${element.offsetWidth || 600}px`;
       clone.style.height = 'auto';
       clone.style.overflow = 'visible';
@@ -76,15 +85,15 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       
-      // Fallback khusus Safari iOS yang sering memblokir fungsi save()
-      if (navigator.userAgent.match(/(iPod|iPhone|iPad|Safari)/) && !navigator.userAgent.match(/Chrome/)) {
-        const blobUrl = pdf.output('bloburl');
-        window.open(blobUrl, '_blank');
+      if (isSafari && newTab) {
+        newTab.location.href = pdf.output('bloburl');
       } else {
         pdf.save(`Invoice_Laporan_${ticketNumber}.pdf`);
+        if (newTab) newTab.close();
       }
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
+      if (newTab) newTab.close();
       window.print();
     } finally {
       setIsExporting(false);
