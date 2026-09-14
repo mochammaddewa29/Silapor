@@ -18,6 +18,7 @@ import {
   FileText,
   Trash2,
   MessageCircle
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { reportsAPI } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
