@@ -102,10 +102,16 @@ const GlobalChatWidget = () => {
             ) : (
               <div className="flex-1 overflow-y-auto">
                 <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                  {reports.map(report => {
-                    const unread = unreadCounts[report.id] || 0;
-                    const latestMsg = latestMessages[report.id];
-                    const ticketNumber = `TKT-${String(report.id).padStart(5, '0')}`;
+                  {[...reports]
+                    .sort((a, b) => {
+                      const timeA = latestMessages[a.id] ? new Date(latestMessages[a.id].created_at).getTime() : new Date(a.created_at).getTime();
+                      const timeB = latestMessages[b.id] ? new Date(latestMessages[b.id].created_at).getTime() : new Date(b.created_at).getTime();
+                      return timeB - timeA;
+                    })
+                    .map(report => {
+                      const unread = unreadCounts[report.id] || 0;
+                      const latestMsg = latestMessages[report.id];
+                      const ticketNumber = `TKT-${String(report.id).padStart(5, '0')}`;
                     
                     return (
                       <button
