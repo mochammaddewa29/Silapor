@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import { ChatProvider } from '../context/ChatContext';
+import GlobalChatWidget from './GlobalChatWidget';
 
 export const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0F172A] transition-colors duration-200">
+    <ChatProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0F172A] transition-colors duration-200">
       {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
@@ -24,6 +27,10 @@ export const Layout = () => {
         </footer>
       </div>
     </div>
+      
+    {/* Global Chat Widget */}
+    <GlobalChatWidget />
+  </ChatProvider>
   );
 };
 

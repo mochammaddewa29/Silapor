@@ -18,9 +18,9 @@ import { reportsAPI, getImageUrl } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import ReportInvoiceModal from '../components/ReportInvoiceModal';
-import ReportComments from '../components/ReportComments';
 import { formatDate } from '../utils/date';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 
 export const ReportHistoryPage = () => {
   const [reports, setReports] = useState([]);
@@ -33,9 +33,9 @@ export const ReportHistoryPage = () => {
   // Selected report for invoice / detail modal
   const [selectedReport, setSelectedReport] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-  const [activeChatReportId, setActiveChatReportId] = useState(null);
 
   const { user } = useAuth();
+  const { openChat } = useChat();
   const navigate = useNavigate();
 
   const fetchReports = async () => {
@@ -233,7 +233,7 @@ export const ReportHistoryPage = () => {
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-[#334155] flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setActiveChatReportId(report.id)}
+                    onClick={() => openChat(report.id)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white px-3 py-2 transition-all duration-200"
                     title="Live Chat"
                   >
@@ -286,15 +286,6 @@ export const ReportHistoryPage = () => {
             setIsInvoiceOpen(false);
             setSelectedReport(null);
           }}
-        />
-      )}
-
-      {/* Floating Global Chat */}
-      {activeChatReportId && (
-        <ReportComments
-          reportId={activeChatReportId}
-          currentUser={user}
-          onClose={() => setActiveChatReportId(null)}
         />
       )}
     </div>

@@ -18,18 +18,18 @@ import {
   FileText,
   Trash2,
   MessageCircle
-} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { reportsAPI } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import ReportDetailModal from '../components/ReportDetailModal';
-import ReportComments from '../components/ReportComments';
 import { formatDate } from '../utils/date';
 import { exportReportsToPDF } from '../utils/exportPdf';
 
 export const AdminReportsPage = () => {
   const { user } = useAuth();
+  const { openChat } = useChat();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,7 +47,6 @@ export const AdminReportsPage = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
-  const [activeChatReportId, setActiveChatReportId] = useState(null);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
 
@@ -512,7 +511,7 @@ export const AdminReportsPage = () => {
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setActiveChatReportId(report.id)}
+                            onClick={() => openChat(report.id)}
                             className="inline-flex items-center justify-center rounded-xl p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all duration-150 hover:scale-110"
                             title="Buka Live Chat"
                           >
@@ -609,7 +608,7 @@ export const AdminReportsPage = () => {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
-                        onClick={() => setActiveChatReportId(report.id)}
+                        onClick={() => openChat(report.id)}
                         className="inline-flex items-center justify-center rounded-xl p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all"
                         title="Buka Live Chat"
                       >
@@ -673,15 +672,6 @@ export const AdminReportsPage = () => {
             setSelectedReport(null);
           }}
           onUpdated={fetchReports}
-        />
-      )}
-
-      {/* Floating Global Chat */}
-      {activeChatReportId && (
-        <ReportComments
-          reportId={activeChatReportId}
-          currentUser={user}
-          onClose={() => setActiveChatReportId(null)}
         />
       )}
     </div>
