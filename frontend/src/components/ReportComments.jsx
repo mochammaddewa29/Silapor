@@ -3,7 +3,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { reportsAPI } from '../services/api';
 
-const ReportComments = ({ reportId, currentUser, isPublic = false, onClose }) => {
+const ReportComments = ({ reportId, currentUser, isPublic = false, onClose, className = "h-[350px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-inner" }) => {
   const [comments, setComments] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +79,7 @@ const ReportComments = ({ reportId, currentUser, isPublic = false, onClose }) =>
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className={`flex flex-col bg-white dark:bg-gray-900 ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-gray-800">
         {comments.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm">
