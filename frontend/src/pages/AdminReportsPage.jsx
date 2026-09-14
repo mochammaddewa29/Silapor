@@ -19,7 +19,6 @@ import {
   Trash2,
   MessageCircle
 import { useAuth } from '../context/AuthContext';
-import { useChat } from '../context/ChatContext';
 import { reportsAPI } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
@@ -29,7 +28,6 @@ import { exportReportsToPDF } from '../utils/exportPdf';
 
 export const AdminReportsPage = () => {
   const { user } = useAuth();
-  const { openChat } = useChat();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -511,14 +509,6 @@ export const AdminReportsPage = () => {
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => openChat(report.id)}
-                            className="inline-flex items-center justify-center rounded-xl p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all duration-150 hover:scale-110"
-                            title="Buka Live Chat"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => handleOpenDetail(report)}
                             className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 hover:bg-[#2563EB] text-[#2563EB] hover:text-white dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-[#2563EB] dark:hover:text-white px-3 py-1.5 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                           >
@@ -606,14 +596,6 @@ export const AdminReportsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => openChat(report.id)}
-                        className="inline-flex items-center justify-center rounded-xl p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all"
-                        title="Buka Live Chat"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </button>
                       <button
                         type="button"
                         onClick={() => handleOpenDetail(report)}
