@@ -107,25 +107,16 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
 
   const handleMobileDownload = async () => {
     if (!pdfReadyData) return;
-    const { file, blobUrl, fileName } = pdfReadyData;
-    let shared = false;
+    const { blobUrl, fileName } = pdfReadyData;
 
-    // Bagikan via native share API Apple/Android
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: fileName,
-          text: 'Tanda Terima Pengaduan Fasilitas'
-        });
-        shared = true;
-      } catch (shareErr) {
-        console.log('Share dibatalkan atau gagal', shareErr);
-      }
-    }
+    const isSafari = navigator.userAgent.match(/(iPod|iPhone|iPad|Safari)/i) && !navigator.userAgent.match(/Chrome/i);
 
-    // Jika fitur share ditolak/tidak ada, langsung alihkan ke Download Link programatik
-    if (!shared) {
+    if (isSafari) {
+      // 3. Safari Fix Fallback:
+      // Karena iOS Safari kadang memblokir <a download> atau share API
+      window.location.href = blobUrl;
+    } else {
+      // 1. Frontend: Pakai <a download> trigger via JS
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = fileName;
