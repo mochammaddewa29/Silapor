@@ -63,10 +63,13 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       clone.style.backgroundColor = '#ffffff';
       
       document.body.appendChild(clone);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const isMobileDevice = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
+      
+      // Kurangi delay untuk mempercepat proses
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const canvas = await html2canvas(clone, {
-        scale: 2,
+        scale: isMobileDevice ? 1.5 : 2, // Turunkan resolusi sedikit di HP agar 2x lebih cepat
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
