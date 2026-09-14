@@ -1068,7 +1068,7 @@ exports.exportPDF = async (req, res) => {
       return res.status(404).json({ error: 'Laporan tidak ditemukan' });
     }
 
-    const PdfPrinter = require('pdfmake');
+    const pdfmake = require('pdfmake');
     const fonts = {
       Helvetica: {
         normal: 'Helvetica',
@@ -1077,7 +1077,7 @@ exports.exportPDF = async (req, res) => {
         bolditalics: 'Helvetica-BoldOblique'
       }
     };
-    const printer = new PdfPrinter(fonts);
+    pdfmake.setFonts(fonts);
 
     // Fetch and convert image to base64 if it exists
     let photoBase64 = null;
@@ -1244,14 +1244,14 @@ exports.exportPDF = async (req, res) => {
       });
     }
 
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    const pdf = pdfmake.createPdf(docDefinition);
     
     const fileName = `Invoice_Laporan_${report.ticket_number}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     
-    pdfDoc.pipe(res);
-    pdfDoc.end();
+    const pdfBuffer = await pdf.getBuffer();
+    res.send(pdfBuffer);
 
   } catch (err) {
     console.error('Error generating PDF with pdfmake:', err);
