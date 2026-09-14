@@ -145,7 +145,7 @@ async function initDatabase() {
 }
 
 let lastSyncTime = 0;
-const SYNC_INTERVAL_MS = 2000; // 2 seconds cache for near instant updates
+const SYNC_INTERVAL_MS = 60000; // 60 seconds cache to speed up API responses
 
 async function syncFromCloud(force = false) {
   if (!db) return;
@@ -153,77 +153,83 @@ async function syncFromCloud(force = false) {
   if (!force && (now - lastSyncTime < SYNC_INTERVAL_MS)) {
     return;
   }
-  lastSyncTime = now;
-  try {
-    const cloudReports = await firebaseService.getReportsFromFirebase();
-    if (Array.isArray(cloudReports)) {
-      const validCloudIds = cloudReports
-        .map(r => parseInt(r.id, 10))
-        .filter(id => !isNaN(id) && id > 0);
+  
+  const performSync = async () => {
+    lastSyncTime = Date.now();
+    try {
+      const cloudReports = await firebaseService.getReportsFromFirebase();
+      if (Array.isArray(cloudReports)) {
+        const validCloudIds = cloudReports
+          .map(r => parseInt(r.id, 10))
+          .filter(id => !isNaN(id) && id > 0);
 
-      if (validCloudIds.length === 0) {
-        // Jika di Firebase semua laporan dihapus, kosongkan juga di SQLite
-        db.run("DELETE FROM reports;");
-      } else {
-        // Hapus laporan di SQLite yang sudah dihapus dari Firebase
-        const placeholders = validCloudIds.map(() => '?').join(',');
-        db.run(`DELETE FROM reports WHERE id NOT IN (${placeholders});`, validCloudIds);
-      }
-
-      // Masukkan / perbarui data yang ada di Firebase
-      for (const r of cloudReports) {
-        if (!r.id) continue;
-        db.run(`
-          INSERT OR REPLACE INTO reports (
-            id, user_id, reporter_name, division, location, category, 
-            item_name, description, photo_url, priority, status, 
-            technician, repair_notes, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          r.id, 
-          r.user_id || 1, 
-          r.reporter_name || 'Anonim', 
-          r.division || '', 
-          r.location || '', 
-          r.category || 'Lainnya', 
-          r.item_name || '', 
-          r.description || '', 
-          r.photo_url || null, 
-          r.priority || 'Sedang', 
-          r.status || 'Menunggu', 
-          r.technician || null, 
-          r.repair_notes || null, 
-          r.created_at || new Date().toISOString(), 
-          r.updated_at || new Date().toISOString()
-        ]);
-      }
-
-      const maxReportRow = db.exec("SELECT MAX(id) as max_id FROM reports")[0]?.values[0][0] || 0;
-      db.run("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('reports', ?)", [maxReportRow]);
-      
-      // Auto-cleanup akun user non-admin yang tidak memiliki laporan
-      try {
-        const orphanUsersResult = db.exec(`
-          SELECT u.id, u.username 
-          FROM users u 
-          LEFT JOIN reports r ON u.id = r.user_id 
-          WHERE u.role != 'admin' AND u.username != 'admin' AND r.id IS NULL
-        `);
-        if (orphanUsersResult.length && orphanUsersResult[0].values.length) {
-          for (const [orphanId, orphanUsername] of orphanUsersResult[0].values) {
-            db.run('DELETE FROM users WHERE id = ?', [orphanId]);
-            if (firebaseService.deleteUserFromFirebase) {
-              await firebaseService.deleteUserFromFirebase(orphanId);
-            }
-            console.log(`[Auto-cleanup] User #${orphanId} (${orphanUsername}) dibersihkan karena tidak memiliki laporan.`);
-          }
+        if (validCloudIds.length === 0) {
+          db.run("DELETE FROM reports;");
+        } else {
+          const placeholders = validCloudIds.map(() => '?').join(',');
+          db.run(`DELETE FROM reports WHERE id NOT IN (${placeholders});`, validCloudIds);
         }
-      } catch (e) {}
 
-      saveDatabase();
+        for (const r of cloudReports) {
+          if (!r.id) continue;
+          db.run(`
+            INSERT OR REPLACE INTO reports (
+              id, user_id, reporter_name, division, location, category, 
+              item_name, description, photo_url, priority, status, 
+              technician, repair_notes, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            r.id, 
+            r.user_id || 1, 
+            r.reporter_name || 'Anonim', 
+            r.division || '', 
+            r.location || '', 
+            r.category || 'Lainnya', 
+            r.item_name || '', 
+            r.description || '', 
+            r.photo_url || null, 
+            r.priority || 'Sedang', 
+            r.status || 'Menunggu', 
+            r.technician || null, 
+            r.repair_notes || null, 
+            r.created_at || new Date().toISOString(), 
+            r.updated_at || new Date().toISOString()
+          ]);
+        }
+
+        const maxReportRow = db.exec("SELECT MAX(id) as max_id FROM reports")[0]?.values[0][0] || 0;
+        db.run("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('reports', ?)", [maxReportRow]);
+        
+        try {
+          const orphanUsersResult = db.exec(`
+            SELECT u.id, u.username 
+            FROM users u 
+            LEFT JOIN reports r ON u.id = r.user_id 
+            WHERE u.role != 'admin' AND u.username != 'admin' AND r.id IS NULL
+          `);
+          if (orphanUsersResult.length && orphanUsersResult[0].values.length) {
+            for (const [orphanId, orphanUsername] of orphanUsersResult[0].values) {
+              db.run('DELETE FROM users WHERE id = ?', [orphanId]);
+              if (firebaseService.deleteUserFromFirebase) {
+                await firebaseService.deleteUserFromFirebase(orphanId);
+              }
+            }
+          }
+        } catch (e) {}
+
+        saveDatabase();
+      }
+    } catch (err) {
+      console.warn('[Cloud Firestore] Gagal sinkronisasi laporan berkala:', err.message);
     }
-  } catch (err) {
-    console.warn('[Cloud Firestore] Gagal sinkronisasi laporan berkala:', err.message);
+  };
+
+  // If it's a cold boot (lastSyncTime === 0), we MUST wait for data from Firebase
+  if (lastSyncTime === 0 || force) {
+    await performSync();
+  } else {
+    // Otherwise, we do it in the background so the API responds instantly
+    performSync();
   }
 }
 
