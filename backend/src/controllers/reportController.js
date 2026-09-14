@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { queryAll, queryOne, runQuery, getDb, syncFromCloud } = require('../config/database');
-const { syncReportToFirebase, syncUserToFirebase, syncCommentToFirebase, getCommentsFromFirebase } = require('../services/firebaseService');
+const { syncReportToFirebase, syncUserToFirebase, syncCommentToFirebase, getCommentsFromFirebase, syncLogToFirebase, getLogsFromFirebase } = require('../services/firebaseService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
 const ExcelJS = require('exceljs');
 
@@ -418,8 +418,19 @@ exports.updateStatus = async (req, res) => {
     runQuery('UPDATE reports SET status = ?, updated_at = ? WHERE id = ?', [status, now, parseInt(id)]);
     const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
 
+    // Tambahkan log aktivitas
+    const logAction = `Mengubah status menjadi ${status}`;
+    const logRes = runQuery(
+      'INSERT INTO report_logs (report_id, user_id, user_name, role, action, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [parseInt(id), req.user.id, req.user.username, req.user.role, logAction, now]
+    );
+    const newLog = queryOne('SELECT * FROM report_logs WHERE id = ?', [logRes.lastInsertRowid]);
+
     // Sinkronkan status baru ke Firebase Cloud Firestore
-    await syncReportToFirebase(updated);
+    await Promise.allSettled([
+      syncReportToFirebase(updated),
+      syncLogToFirebase(newLog, updated.id)
+    ]);
 
     res.json(updated);
   } catch (err) {
@@ -444,13 +455,54 @@ exports.assignTechnician = async (req, res) => {
     runQuery('UPDATE reports SET technician = ?, updated_at = ? WHERE id = ?', [techValue, now, parseInt(id)]);
     const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
 
+    // Tambahkan log aktivitas
+    const actionText = techValue ? `Menugaskan teknisi: ${techValue}` : 'Menghapus penugasan teknisi';
+    const logRes = runQuery(
+      'INSERT INTO report_logs (report_id, user_id, user_name, role, action, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [parseInt(id), req.user.id, req.user.username, req.user.role, actionText, now]
+    );
+    const newLog = queryOne('SELECT * FROM report_logs WHERE id = ?', [logRes.lastInsertRowid]);
+
     // Sinkronkan penugasan teknisi ke Firebase Cloud Firestore
-    await syncReportToFirebase(updated);
+    await Promise.allSettled([
+      syncReportToFirebase(updated),
+      syncLogToFirebase(newLog, updated.id)
+    ]);
 
     res.json(updated);
   } catch (err) {
     console.error('Assign technician error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+};
+
+// Get activity logs
+exports.getLogs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check local SQLite first
+    let logs = queryAll('SELECT * FROM report_logs WHERE report_id = ? ORDER BY created_at ASC', [parseInt(id)]);
+    
+    // If not found in SQLite (e.g. after serverless restart), fetch from Firebase
+    if (!logs || logs.length === 0) {
+      logs = await getLogsFromFirebase(parseInt(id));
+      if (logs && logs.length > 0) {
+        // Hydrate to local SQLite for future queries
+        logs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        for (const lg of logs) {
+          runQuery(`
+            INSERT OR IGNORE INTO report_logs (id, report_id, user_id, user_name, role, action, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `, [lg.id, lg.report_id, lg.user_id, lg.user_name, lg.role, lg.action, lg.created_at]);
+        }
+      }
+    }
+
+    res.json(logs || []);
+  } catch (err) {
+    console.error('Get logs error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat mengambil riwayat aktivitas.' });
   }
 };
 

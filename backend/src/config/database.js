@@ -67,6 +67,20 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS report_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      report_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      user_name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      action TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (report_id) REFERENCES reports(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   try {
     db.run("ALTER TABLE reports ADD COLUMN division TEXT");
   } catch (e) {

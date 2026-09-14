@@ -99,6 +99,10 @@ export const reportsAPI = {
     const response = await api.delete(`/reports/${id}`);
     return response.data;
   },
+  getLogs: async (id) => {
+    const response = await api.get(`/reports/${id}/logs`);
+    return response.data;
+  },
   getDashboardStats: async (params = {}) => {
     const response = await api.get('/reports/stats/dashboard', { params });
     return response.data;

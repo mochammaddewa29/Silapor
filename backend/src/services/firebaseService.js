@@ -186,6 +186,44 @@ async function getCommentsFromFirebase(reportId) {
   }
 }
 
+/**
+ * Menyimpan log aktivitas ke sub-koleksi laporan di Cloud Firestore
+ * Path: 'reports/{reportId}/logs/{logId}'
+ */
+async function syncLogToFirebase(log, reportId) {
+  if (!log || !log.id || !reportId) return;
+  try {
+    const logDocRef = doc(db, `reports/${reportId}/logs`, String(log.id));
+    const dataToSave = {
+      id: log.id,
+      report_id: reportId,
+      user_id: log.user_id,
+      user_name: log.user_name,
+      role: log.role,
+      action: log.action,
+      created_at: log.created_at || new Date().toISOString()
+    };
+    await withTimeout(setDoc(logDocRef, dataToSave, { merge: true }), 5000);
+    console.log(`[Cloud Firestore] Log aktivitas #${log.id} berhasil disimpan ke laporan #${reportId}.`);
+  } catch (err) {
+    console.warn(`[Firestore Notice] Gagal sinkronisasi log aktivitas #${log.id}:`, err.message);
+  }
+}
+
+/**
+ * Mengambil seluruh log aktivitas dari suatu laporan di Cloud Firestore
+ */
+async function getLogsFromFirebase(reportId) {
+  if (!reportId) return [];
+  try {
+    const snapshot = await withTimeout(getDocs(collection(db, `reports/${reportId}/logs`)), 5000);
+    return snapshot.docs.map(d => d.data());
+  } catch (err) {
+    console.warn(`[Firestore Notice] Gagal mengambil log aktivitas untuk laporan #${reportId}:`, err.message);
+    return [];
+  }
+}
+
 module.exports = {
   syncUserToFirebase,
   syncReportToFirebase,
@@ -195,5 +233,7 @@ module.exports = {
   getReportsFromFirebase,
   getUsersFromFirebase,
   syncCommentToFirebase,
-  getCommentsFromFirebase
+  getCommentsFromFirebase,
+  syncLogToFirebase,
+  getLogsFromFirebase
 };

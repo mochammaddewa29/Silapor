@@ -42,4 +42,7 @@ router.put('/:id/assign', authenticate, requireAdmin, reportController.assignTec
 router.put('/:id/notes', authenticate, requireAdmin, reportController.addRepairNotes);
 router.delete('/:id', authenticate, requireAdmin, reportController.deleteReport);
 
+// Get logs for a report
+router.get('/:id/logs', authenticate, reportController.getLogs);
+
 module.exports = router;

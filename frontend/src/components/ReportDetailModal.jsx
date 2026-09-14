@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Calendar, MapPin, Tag, User, Wrench, FileText, Check, AlertCircle, Image as ImageIcon, Building, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, MapPin, Tag, User, Wrench, FileText, Check, AlertCircle, Image as ImageIcon, Building, Printer, Activity } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import ReportInvoiceModal from './ReportInvoiceModal';
@@ -17,6 +17,25 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && report?.id) {
+      const fetchLogs = async () => {
+        try {
+          setLoadingLogs(true);
+          const data = await reportsAPI.getLogs(report.id);
+          setLogs(data);
+        } catch (error) {
+          console.error('Gagal mengambil log aktivitas:', error);
+        } finally {
+          setLoadingLogs(false);
+        }
+      };
+      fetchLogs();
+    }
+  }, [isOpen, report?.id]);
 
   if (!isOpen || !report) return null;
 
@@ -38,6 +57,13 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
       }
 
       setSaveSuccess(true);
+      
+      // Refresh logs after saving
+      try {
+        const data = await reportsAPI.getLogs(report.id);
+        setLogs(data);
+      } catch (err) {}
+
       if (onUpdated) {
         onUpdated();
       }
@@ -197,6 +223,52 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
               </div>
             </div>
           )}
+
+          {/* Activity Logs (Timeline) */}
+          <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Riwayat Aktivitas
+              </span>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+              {loadingLogs ? (
+                <div className="text-center py-4 text-xs text-gray-500">Memuat riwayat...</div>
+              ) : logs.length === 0 ? (
+                <div className="text-center py-4 text-xs text-gray-500 italic">
+                  Belum ada aktivitas admin yang tercatat untuk laporan ini.
+                </div>
+              ) : (
+                <div className="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-6">
+                  {logs.map((log, index) => (
+                    <div key={log.id} className="relative pl-6">
+                      {/* Timeline dot */}
+                      <span className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-purple-500 ring-4 ring-white dark:ring-gray-800" />
+                      
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-4 mb-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-gray-900 dark:text-white">
+                            {log.user_name}
+                          </span>
+                          <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 rounded-md">
+                            {log.role}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-gray-400 shrink-0">
+                          {formatDateTime(log.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        {log.action}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* ADMIN ACTION PANEL */}
           {isAdmin && (
