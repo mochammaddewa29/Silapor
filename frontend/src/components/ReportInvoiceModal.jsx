@@ -39,15 +39,30 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       setIsExporting(true);
       const element = document.getElementById('invoice-print-area');
       
-      // Sempatkan delay kecil agar DOM siap
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Clone element ke body agar tidak terpotong oleh overflow parent (Solusi PDF Putih/Blank)
+      const clone = element.cloneNode(true);
+      clone.style.position = 'absolute';
+      clone.style.top = '-9999px';
+      clone.style.left = '-9999px';
+      clone.style.width = `${element.offsetWidth || 600}px`;
+      clone.style.height = 'auto';
+      clone.style.overflow = 'visible';
+      clone.style.maxHeight = 'none';
+      clone.style.backgroundColor = '#ffffff';
       
-      const canvas = await html2canvas(element, {
+      document.body.appendChild(clone);
+      
+      // Sempatkan delay kecil agar gambar/DOM siap
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
+      
+      document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
@@ -60,10 +75,16 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Invoice_Laporan_${ticketNumber}.pdf`);
+      
+      // Fallback khusus Safari iOS yang sering memblokir fungsi save()
+      if (navigator.userAgent.match(/(iPod|iPhone|iPad|Safari)/) && !navigator.userAgent.match(/Chrome/)) {
+        const blobUrl = pdf.output('bloburl');
+        window.open(blobUrl, '_blank');
+      } else {
+        pdf.save(`Invoice_Laporan_${ticketNumber}.pdf`);
+      }
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
-      // Fallback ke browser print
       window.print();
     } finally {
       setIsExporting(false);
