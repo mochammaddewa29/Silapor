@@ -622,7 +622,7 @@ export const AdminReportsPage = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDeleteReport(report.id, report.item_name)}
+                        onClick={() => handleDeleteReport(report.id, report.item_name, report.ticket_number)}
                         className="inline-flex items-center justify-center rounded-xl p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all"
                         title="Hapus Laporan Permanen"
                       >
