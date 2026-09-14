@@ -26,23 +26,22 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
 
   const [imgError, setImgError] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
+  const [pdfReadyData, setPdfReadyData] = React.useState(null);
 
   React.useEffect(() => {
     setImgError(false);
-  }, [report?.id, report?.photo_url]);
+    setPdfReadyData(null);
+  }, [report?.id, report?.photo_url, isOpen]);
 
   const ticketNumber = report?.ticket_number || `TKT-${String(report?.id || '').padStart(5, '0')}`;
   const photoFullUrl = report.photo_url ? getImageUrl(report.photo_url) : null;
 
-  const handlePrint = async () => {
+  const handlePreparePDF = async () => {
     try {
       setIsExporting(true);
       const element = document.getElementById('invoice-print-area');
       
-      // Clone element ke body agar tidak terpotong oleh overflow parent (Solusi PDF Putih/Blank)
       const clone = element.cloneNode(true);
-      
-      // HAPUS SEMUA CLASS DARK MODE AGAR TEKS TERLIHAT JELAS PADA PDF
       const allElements = clone.querySelectorAll('*');
       allElements.forEach(el => {
         if (typeof el.className === 'string') {
@@ -64,8 +63,6 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       clone.style.backgroundColor = '#ffffff';
       
       document.body.appendChild(clone);
-      
-      // Sempatkan delay kecil agar gambar/DOM siap
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const canvas = await html2canvas(clone, {
@@ -78,52 +75,67 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
       document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       
       const fileName = `Invoice_Laporan_${ticketNumber}.pdf`;
+      const blob = pdf.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
 
-      // Coba gunakan Web Share API khusus untuk pengguna HP (iOS Safari / Android)
       const isMobile = navigator.userAgent.match(/(iPod|iPhone|iPad|Android)/i);
-      let shared = false;
-
-      if (isMobile && navigator.canShare) {
-        try {
-          const blob = pdf.output('blob');
-          const file = new File([blob], fileName, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: fileName,
-              text: 'Tanda Terima Pengaduan Fasilitas'
-            });
-            shared = true;
-          }
-        } catch (shareErr) {
-          console.log('Share dibatalkan user atau gagal', shareErr);
-        }
+      
+      // Jika desktop, langsung download otomatis tanpa 2-step
+      if (!isMobile) {
+        pdf.save(fileName);
+        setIsExporting(false);
+        return;
       }
       
-      // Jika bukan HP atau share gagal/dibatalkan, gunakan fungsi save otomatis (download)
-      if (!shared) {
-        pdf.save(fileName);
-      }
+      // Jika HP/Safari, simpan ke state untuk Step 2 (klik manual pengguna tanpa delay)
+      setPdfReadyData({ file: new File([blob], fileName, { type: 'application/pdf' }), blobUrl, fileName });
       
     } catch (err) {
       console.error('Gagal membuat PDF:', err);
-      // Fallback paling akhir
       window.print();
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleMobileDownload = async () => {
+    if (!pdfReadyData) return;
+    const { file, blobUrl, fileName } = pdfReadyData;
+    let shared = false;
+
+    // Bagikan via native share API Apple/Android
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+          text: 'Tanda Terima Pengaduan Fasilitas'
+        });
+        shared = true;
+      } catch (shareErr) {
+        console.log('Share dibatalkan atau gagal', shareErr);
+      }
+    }
+
+    // Jika fitur share ditolak/tidak ada, langsung alihkan ke Download Link programatik
+    if (!shared) {
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    
+    // Reset state agar tombol kembali seperti semula
+    setPdfReadyData(null);
   };
 
   const getPriorityStyle = (p) => {
@@ -337,24 +349,35 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
           </button>
 
           <div className="w-full sm:w-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              disabled={isExporting}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isExporting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                  <span>Memproses PDF...</span>
-                </>
-              ) : (
-                <>
-                  <Printer className="h-4 w-4" />
-                  <span>Unduh PDF / Cetak</span>
-                </>
-              )}
-            </button>
+            {pdfReadyData ? (
+              <button
+                type="button"
+                onClick={handleMobileDownload}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-green-600/30 hover:bg-green-700 active:scale-95 transition-all animate-pulse"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Simpan / Bagikan PDF Sekarang</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePreparePDF}
+                disabled={isExporting}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isExporting ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    <span>Memproses PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Printer className="h-4 w-4" />
+                    <span>Unduh PDF / Cetak</span>
+                  </>
+                )}
+              </button>
+            )}
 
             <button
               type="button"
