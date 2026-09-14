@@ -61,6 +61,11 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
         clone.className = clone.className.replace(/dark:[^\s]+/g, '').trim();
       }
 
+      // Paksa semua warna font menjadi hitam pekat sesuai permintaan
+      const styleOverride = document.createElement('style');
+      styleOverride.innerHTML = '* { color: #000000 !important; }';
+      clone.appendChild(styleOverride);
+
       clone.style.position = 'absolute';
       clone.style.top = '0px'; // JANGAN gunakan -9999px karena html2canvas bisa mengabaikan elemen di luar viewport
       clone.style.left = '0px';
