@@ -131,27 +131,7 @@ async function initDatabase() {
     console.warn('[Cloud Firestore] Tidak dapat mengambil data user saat startup:', err.message);
   }
 
-  // Auto-cleanup akun user non-admin yang sudah tidak memiliki laporan aktif
-  try {
-    const orphanUsersResult = db.exec(`
-      SELECT u.id, u.username 
-      FROM users u 
-      LEFT JOIN reports r ON u.id = r.user_id 
-      WHERE u.role != 'admin' AND u.username != 'admin' AND r.id IS NULL
-    `);
-    if (orphanUsersResult.length && orphanUsersResult[0].values.length) {
-      const orphans = orphanUsersResult[0].values;
-      for (const [orphanId, orphanUsername] of orphans) {
-        db.run('DELETE FROM users WHERE id = ?', [orphanId]);
-        if (firebaseService.deleteUserFromFirebase) {
-          await firebaseService.deleteUserFromFirebase(orphanId);
-        }
-        console.log(`[Auto-cleanup] User #${orphanId} (${orphanUsername}) dibersihkan karena tidak memiliki laporan.`);
-      }
-    }
-  } catch (err) {
-    console.warn('[Auto-cleanup Notice] Gagal membersihkan orphan users saat startup:', err.message);
-  }
+  // Auto-cleanup dinonaktifkan agar user baru tidak terhapus.
 
   saveDatabase();
   console.log('Database SQLite initialized');
@@ -216,22 +196,7 @@ async function syncFromCloud(force = false) {
         const maxReportRow = db.exec("SELECT MAX(id) as max_id FROM reports")[0]?.values[0][0] || 0;
         db.run("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('reports', ?)", [maxReportRow]);
         
-        try {
-          const orphanUsersResult = db.exec(`
-            SELECT u.id, u.username 
-            FROM users u 
-            LEFT JOIN reports r ON u.id = r.user_id 
-            WHERE u.role != 'admin' AND u.username != 'admin' AND r.id IS NULL
-          `);
-          if (orphanUsersResult.length && orphanUsersResult[0].values.length) {
-            for (const [orphanId, orphanUsername] of orphanUsersResult[0].values) {
-              db.run('DELETE FROM users WHERE id = ?', [orphanId]);
-              if (firebaseService.deleteUserFromFirebase) {
-                await firebaseService.deleteUserFromFirebase(orphanId);
-              }
-            }
-          }
-        } catch (e) {}
+        // Cleanup logic removed.
 
         saveDatabase();
       }
