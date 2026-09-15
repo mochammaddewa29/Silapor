@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { reportsAPI } from '../services/api';
+import { chatAPI } from '../services/api';
 import { useAuth } from './AuthContext';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -7,74 +7,77 @@ import { db } from '../config/firebase';
 const ChatContext = createContext();
 
 export const ChatProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [activeReportId, setActiveReportId] = useState(null);
-  const [reports, setReports] = useState([]);
+  const [activeUserId, setActiveUserId] = useState(null);
+  const [chatUsers, setChatUsers] = useState([]);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [latestMessages, setLatestMessages] = useState({});
 
-  // Fetch reports when user logs in
+  // Fetch users if Admin
   useEffect(() => {
     if (!user) {
-      setReports([]);
+      setChatUsers([]);
       setUnreadCounts({});
       setLatestMessages({});
       return;
     }
 
-    const loadReports = async () => {
-      try {
-        const data = await reportsAPI.getAll();
-        // For admin we might want to only show reports that have chats or just limit to recent ones.
-        // For now, we show active reports (not Selesai/Ditolak) or reports that they interacted with.
-        const activeReports = (data.reports || []).filter(r => r.status !== 'Selesai' && r.status !== 'Ditolak');
-        setReports(activeReports);
-      } catch (err) {
-        console.error('Failed to load reports for chat context:', err);
-      }
-    };
+    if (isAdmin) {
+      const loadUsers = async () => {
+        try {
+          const users = await chatAPI.getUsers();
+          setChatUsers(users || []);
+        } catch (err) {
+          console.error('Failed to load users for chat context:', err);
+        }
+      };
+      loadUsers();
+    } else {
+      // If regular user, their only "chat user" is themselves (Admin responds to them)
+      setChatUsers([{ id: user.id, full_name: 'Admin Support' }]);
+      // Immediately set their active chat to themselves
+      setActiveUserId(user.id);
+    }
+  }, [user, isAdmin]);
 
-    loadReports();
-  }, [user]);
-
-  // Listen to individual reports' comments to track latest message and unread count
+  // Listen to messages for unread counts and latest messages
   useEffect(() => {
-    if (!user || reports.length === 0) return;
+    if (!user || chatUsers.length === 0) return;
 
     const unsubscribes = [];
 
-    reports.forEach((report) => {
+    chatUsers.forEach((chatUser) => {
+      const targetUserId = isAdmin ? chatUser.id : user.id;
+
       const q = query(
-        collection(db, `reports/${report.id}/comments`),
+        collection(db, `direct_chats/${targetUserId}/messages`),
         orderBy('created_at', 'asc')
       );
 
       const unsub = onSnapshot(q, (snapshot) => {
-        const comments = snapshot.docs.map(doc => doc.data());
-        if (comments.length > 0) {
-          const lastComment = comments[comments.length - 1];
+        const messages = snapshot.docs.map(doc => doc.data());
+        if (messages.length > 0) {
+          const lastMsg = messages[messages.length - 1];
           
           setLatestMessages(prev => ({
             ...prev,
-            [report.id]: lastComment
+            [targetUserId]: lastMsg
           }));
 
-          // Simple unread logic: if the last comment is not by the current user and not currently viewing
-          if (String(lastComment.user_id) !== String(user.id)) {
+          // Unread logic: if the last message is not by the current logged-in user
+          if (String(lastMsg.sender_id) !== String(user.id)) {
             setUnreadCounts(prev => {
-              // Only increment if we haven't seen it in the current session
-              // (Since we don't store read status in DB for this simple version)
-              const currentUnread = prev[report.id] || 0;
+              const currentUnread = prev[targetUserId] || 0;
               return {
                 ...prev,
-                [report.id]: currentUnread + 1 
+                [targetUserId]: currentUnread + 1 
               };
             });
           }
         }
       }, (error) => {
-        console.error("Error listening to comments for report", report.id, error);
+        console.error("Error listening to direct chats for user", targetUserId, error);
       });
 
       unsubscribes.push(unsub);
@@ -83,21 +86,23 @@ export const ChatProvider = ({ children }) => {
     return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [reports, user]);
+  }, [chatUsers, user, isAdmin]);
 
   // Clear unread when viewing a chat
   useEffect(() => {
-    if (activeReportId && isChatOpen) {
+    if (activeUserId && isChatOpen) {
       setUnreadCounts(prev => ({
         ...prev,
-        [activeReportId]: 0
+        [activeUserId]: 0
       }));
     }
-  }, [activeReportId, isChatOpen, latestMessages]);
+  }, [activeUserId, isChatOpen, latestMessages]);
 
-  const openChat = (reportId = null) => {
-    if (reportId) {
-      setActiveReportId(reportId);
+  const openChat = (userId = null) => {
+    if (userId) {
+      setActiveUserId(userId);
+    } else if (!isAdmin && user) {
+      setActiveUserId(user.id);
     }
     setIsChatOpen(true);
   };
@@ -107,25 +112,27 @@ export const ChatProvider = ({ children }) => {
   };
 
   const toggleChat = () => {
+    if (!isChatOpen && !isAdmin && user) {
+      setActiveUserId(user.id);
+    }
     setIsChatOpen(!isChatOpen);
   };
 
-  // Convert unread counts object to a total number, avoiding NaNs
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + (b > 0 ? 1 : 0), 0);
 
   return (
     <ChatContext.Provider
       value={{
         isChatOpen,
-        activeReportId,
-        reports,
+        activeUserId,
+        chatUsers,
         latestMessages,
         unreadCounts,
         totalUnread,
         openChat,
         closeChat,
         toggleChat,
-        setActiveReportId
+        setActiveUserId
       }}
     >
       {children}

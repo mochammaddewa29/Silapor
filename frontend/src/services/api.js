@@ -171,6 +171,17 @@ export const reportsAPI = {
   },
 };
 
+export const chatAPI = {
+  getUsers: async () => {
+    const response = await api.get('/chats/users');
+    return response.data;
+  },
+  sendMessage: async (userId, message) => {
+    const response = await api.post(`/chats/${userId}`, { message });
+    return response.data;
+  },
+};
+
 export const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http') || path.startsWith('data:')) return path;

@@ -52,15 +52,20 @@ app.use(async (req, res, next) => {
 // API Routes (mounted on both /api/... and root /... for maximum compatibility)
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const authMiddleware = (authRoutes && authRoutes.default) ? authRoutes.default : authRoutes;
 const reportMiddleware = (reportRoutes && reportRoutes.default) ? reportRoutes.default : reportRoutes;
+const chatMiddleware = (chatRoutes && chatRoutes.default) ? chatRoutes.default : chatRoutes;
 
 app.use('/api/auth', authMiddleware);
 app.use('/auth', authMiddleware);
 
 app.use('/api/reports', reportMiddleware);
 app.use('/reports', reportMiddleware);
+
+app.use('/api/chats', chatMiddleware);
+app.use('/chats', chatMiddleware);
 
 // Health check
 app.get('/api/health', (req, res) => {

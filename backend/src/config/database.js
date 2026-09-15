@@ -83,6 +83,19 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS direct_chats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL,
+      sender_name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   try {
     db.run("ALTER TABLE reports ADD COLUMN division TEXT");
   } catch (e) {

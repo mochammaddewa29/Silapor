@@ -3,7 +3,6 @@ import { X, Calendar, MapPin, Tag, User, Wrench, FileText, Check, AlertCircle, I
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import ReportInvoiceModal from './ReportInvoiceModal';
-import ReportComments from './ReportComments';
 import { reportsAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/date';
@@ -198,9 +197,6 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
               </div>
             </div>
           </div>
-
-          {/* Real-time Comments / Live Chat (Floating) */}
-          <ReportComments reportId={report.id} reportStatus={report.status} currentUser={user} />
 
           {/* If NOT Admin: Show technician and notes as read-only */}
           {!isAdmin && (

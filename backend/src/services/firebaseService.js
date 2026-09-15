@@ -242,6 +242,30 @@ async function getLogsFromFirebase(reportId) {
   }
 }
 
+/**
+ * Menyimpan pesan chat langsung (1-on-1) ke Cloud Firestore
+ * Path: 'direct_chats/{userId}/messages/{chatId}'
+ */
+async function syncDirectChatToFirebase(chat, userId) {
+  if (!chat || !chat.id || !userId) return;
+  try {
+    const chatDocRef = doc(db, `direct_chats/${userId}/messages`, String(chat.id));
+    const dataToSave = {
+      id: chat.id,
+      user_id: userId,
+      sender_id: chat.sender_id,
+      sender_name: chat.sender_name,
+      role: chat.role,
+      message: chat.message,
+      created_at: chat.created_at || new Date().toISOString()
+    };
+    await withTimeout(setDoc(chatDocRef, dataToSave, { merge: true }), 5000);
+    console.log(`[Cloud Firestore] Direct chat #${chat.id} berhasil disimpan untuk user #${userId}.`);
+  } catch (err) {
+    console.warn(`[Firestore Notice] Gagal sinkronisasi direct chat #${chat.id}:`, err.message);
+  }
+}
+
 module.exports = {
   syncUserToFirebase,
   syncReportToFirebase,
@@ -253,5 +277,6 @@ module.exports = {
   syncCommentToFirebase,
   getCommentsFromFirebase,
   syncLogToFirebase,
-  getLogsFromFirebase
+  getLogsFromFirebase,
+  syncDirectChatToFirebase
 };
