@@ -9,8 +9,11 @@ import ReportFormPage from './pages/ReportFormPage';
 import ReportHistoryPage from './pages/ReportHistoryPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import ProfilePage from './pages/ProfilePage';
+import { useAuth } from './context/AuthContext';
 
 export const App = () => {
+  const { isAdmin } = useAuth();
+  
   return (
     <ErrorBoundary>
       <Routes>
@@ -26,7 +29,7 @@ export const App = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to={isAdmin ? "/dashboard" : "/riwayat"} replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="lapor" element={<ReportFormPage />} />
         <Route path="riwayat" element={<ReportHistoryPage />} />
@@ -44,7 +47,7 @@ export const App = () => {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to={isAdmin ? "/dashboard" : "/riwayat"} replace />} />
     </Routes>
   </ErrorBoundary>
   );

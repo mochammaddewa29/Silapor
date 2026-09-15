@@ -10,10 +10,7 @@ const ProfilePage = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
-    full_name: '',
-    current_password: '',
-    new_password: '',
-    confirm_password: ''
+    full_name: ''
   });
 
   useEffect(() => {
@@ -35,13 +32,8 @@ const ProfilePage = () => {
     setSuccessMsg('');
     setErrorMsg('');
 
-    if (formData.new_password && formData.new_password !== formData.confirm_password) {
-      setErrorMsg('Password baru dan konfirmasi password tidak cocok.');
-      return;
-    }
-
-    if (formData.new_password && formData.new_password.length < 6) {
-      setErrorMsg('Password baru minimal 6 karakter.');
+    if (!formData.full_name.trim()) {
+      setErrorMsg('Nama lengkap tidak boleh kosong.');
       return;
     }
 
@@ -50,11 +42,6 @@ const ProfilePage = () => {
       const dataToUpdate = {
         full_name: formData.full_name
       };
-
-      if (formData.new_password) {
-        dataToUpdate.current_password = formData.current_password;
-        dataToUpdate.new_password = formData.new_password;
-      }
 
       const res = await authAPI.updateProfile(dataToUpdate);
       setSuccessMsg(res.message || 'Profil berhasil diperbarui!');
@@ -69,13 +56,6 @@ const ProfilePage = () => {
         }, 1500);
       }
 
-      // Clear password fields
-      setFormData(prev => ({
-        ...prev,
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      }));
 
     } catch (err) {
       setErrorMsg(err.response?.data?.error || 'Gagal memperbarui profil.');
@@ -174,54 +154,7 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Lock className="h-4 w-4" /> Ganti Password
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Kosongkan bagian ini jika Anda tidak ingin mengubah password.
-              </p>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Password Saat Ini
-                </label>
-                <input
-                  type="password"
-                  name="current_password"
-                  value={formData.current_password}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Password Baru
-                  </label>
-                  <input
-                    type="password"
-                    name="new_password"
-                    value={formData.new_password}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Konfirmasi Password Baru
-                  </label>
-                  <input
-                    type="password"
-                    name="confirm_password"
-                    value={formData.confirm_password}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
 
             <div className="pt-6 flex justify-end">
               <button

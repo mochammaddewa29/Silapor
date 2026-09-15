@@ -31,12 +31,16 @@ export const Sidebar = ({ isOpen, onClose }) => {
   // - User: Riwayat Laporan (khusus personal user)
   // - Admin: Manajemen Laporan (khusus operasional admin)
   const navItems = [
-    {
-      to: '/dashboard',
-      label: 'Dashboard',
-      description: 'Ringkasan & Analitik',
-      icon: LayoutDashboard,
-    },
+    ...(isAdmin
+      ? [
+          {
+            to: '/dashboard',
+            label: 'Dashboard',
+            description: 'Ringkasan & Analitik',
+            icon: LayoutDashboard,
+          },
+        ]
+      : []),
     {
       to: '/lapor',
       label: 'Buat Laporan',

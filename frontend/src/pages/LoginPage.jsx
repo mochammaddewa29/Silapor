@@ -19,13 +19,13 @@ export const LoginPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={isAdmin ? "/dashboard" : "/riwayat"} replace />;
   }
 
   const handleLoginSubmit = async (e) => {
@@ -34,8 +34,8 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(loginUsername, loginPassword);
-      navigate('/dashboard');
+      const data = await login(loginUsername, loginPassword);
+      navigate(data.user.role === 'admin' ? '/dashboard' : '/riwayat');
     } catch (err) {
       console.error('Login error:', err);
       if (!err.response) {
@@ -52,8 +52,8 @@ export const LoginPage = () => {
     setError('');
     setGoogleLoading(true);
     try {
-      await loginWithGoogle();
-      navigate('/dashboard');
+      const data = await loginWithGoogle();
+      navigate(data.user.role === 'admin' ? '/dashboard' : '/riwayat');
     } catch (err) {
       console.error('Google Login error:', err);
       setError('Gagal login dengan Google. Pastikan popup tidak diblokir atau coba lagi.');
