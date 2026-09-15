@@ -85,9 +85,9 @@ export const Sidebar = ({ isOpen, onClose }) => {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-lg font-black tracking-wider text-white">SI</span>
+                <span className="text-lg font-black tracking-wider text-white">Lapor</span>
                 <span className="rounded bg-[#FACC15] px-1.5 py-0.5 text-[10px] font-black uppercase text-blue-950">
-                  LAPOR
+                  JakBan
                 </span>
               </div>
               <p className="text-[11px] font-medium text-slate-400 tracking-tight">
