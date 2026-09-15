@@ -49,16 +49,7 @@ export const Navbar = ({ onOpenSidebar }) => {
 
       {/* Right side: Action items */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        {/* Quick Report Button if not already on report page */}
-        {location.pathname !== '/lapor' && (
-          <button
-            onClick={() => navigate('/lapor')}
-            className="hidden md:inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-            <span>+ Buat Laporan</span>
-          </button>
-        )}
+
 
         {/* Cloud Connection Status Badge */}
         <CloudStatusBadge />
