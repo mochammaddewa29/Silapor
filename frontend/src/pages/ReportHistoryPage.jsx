@@ -211,11 +211,14 @@ export const ReportHistoryPage = () => {
                     <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
                       {report.item_name}
                     </h3>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="inline-block rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                    <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="inline-block rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 max-w-max">
                         {report.category}
                       </span>
-                      <PriorityBadge priority={report.priority} size="sm" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-slate-500 font-medium">Penanganan:</span>
+                        <PriorityBadge priority={report.priority} size="sm" />
+                      </div>
                     </div>
                   </div>
 

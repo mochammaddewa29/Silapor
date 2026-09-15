@@ -224,7 +224,7 @@ exports.createReport = async (req, res) => {
       return res.status(400).json({ error: 'Semua field wajib diisi (nama, lokasi, kategori, nama barang, deskripsi).' });
     }
 
-    const validCategories = ['Elektronik', 'ATK', 'Infrastruktur', 'Furniture', 'Jaringan', 'Lainnya'];
+    const validCategories = ['Elektronik', 'Infrastruktur', 'Furniture', 'Jaringan', 'Lainnya'];
     const isCategoryValid = validCategories.includes(category) || 
                             category.startsWith('Lainnya') || 
                             (typeof category === 'string' && category.trim().length > 0);

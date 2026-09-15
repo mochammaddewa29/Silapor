@@ -10,7 +10,6 @@ import {
   User, 
   Tag, 
   Laptop, 
-  FileText, 
   Building, 
   Armchair, 
   Wifi, 
@@ -44,17 +43,10 @@ export const ReportFormPage = () => {
 
   const categories = [
     { name: 'Elektronik', icon: Laptop, desc: 'AC, TV, PC, Proyektor' },
-    { name: 'ATK', icon: FileText, desc: 'Printer, Kertas, Mesin Tik' },
     { name: 'Infrastruktur', icon: Building, desc: 'Lampu, Kran, Pintu, Atap' },
     { name: 'Furniture', icon: Armchair, desc: 'Meja, Kursi, Lemari' },
     { name: 'Jaringan', icon: Wifi, desc: 'WiFi, Router, Kabel LAN' },
     { name: 'Lainnya', icon: HelpCircle, desc: 'Kerusakan umum lainnya' },
-  ];
-
-  const priorities = [
-    { level: 'Rendah', color: 'border-emerald-400 text-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 dark:text-emerald-300', desc: 'Bisa ditunda, tidak mengganggu operasional' },
-    { level: 'Sedang', color: 'border-amber-400 text-amber-700 bg-amber-50/50 dark:bg-amber-950/20 dark:text-amber-300', desc: 'Perlu diperbaiki segera dalam 1-2 hari' },
-    { level: 'Tinggi', color: 'border-rose-500 text-rose-700 bg-rose-50/50 dark:bg-rose-950/20 dark:text-rose-300', desc: 'Kritis! Menghentikan pekerjaan operasional' },
   ];
 
   const handlePhotoChange = (e) => {
@@ -225,8 +217,8 @@ export const ReportFormPage = () => {
                   required
                   placeholder="Nama lengkap Anda"
                   value={reporterName}
-                  onChange={(e) => setReporterName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-base sm:text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  disabled
+                  className="w-full rounded-xl border border-gray-300 bg-gray-100 py-2.5 pl-10 pr-4 text-base sm:text-sm text-gray-500 cursor-not-allowed focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
                 />
               </div>
             </div>
@@ -271,7 +263,7 @@ export const ReportFormPage = () => {
             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
               Kategori Barang Rusak <span className="text-rose-500">*</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 const isLainnya = cat.name === 'Lainnya';
@@ -369,35 +361,7 @@ export const ReportFormPage = () => {
             </div>
           </div>
 
-          {/* Section 4: Tingkat Prioritas */}
-          <div>
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
-              Tingkat Prioritas Penanganan <span className="text-rose-500">*</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {priorities.map((item) => {
-                const isSelected = priority === item.level;
-                return (
-                  <button
-                    type="button"
-                    key={item.level}
-                    onClick={() => setPriority(item.level)}
-                    className={`flex flex-col p-3.5 rounded-2xl border text-left transition-all ${
-                      isSelected
-                        ? `ring-2 ring-blue-500/20 ${item.color} shadow-sm font-bold`
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold">{item.level}</span>
-                      {isSelected && <div className="h-2 w-2 rounded-full bg-blue-600 dark:bg-amber-400"></div>}
-                    </div>
-                    <p className="text-[11px] mt-1 font-normal opacity-80">{item.desc}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Section 4: Tingkat Prioritas (Dihapus untuk user biasa) */}
 
           {/* Section 5: Upload Foto */}
           <div>

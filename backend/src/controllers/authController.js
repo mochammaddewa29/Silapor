@@ -54,6 +54,61 @@ exports.register = async (req, res) => {
   }
 };
 
+// Google Login / Register
+exports.googleLogin = async (req, res) => {
+  try {
+    const { email, displayName, photoURL, uid } = req.body;
+
+    if (!email || !uid) {
+      return res.status(400).json({ error: 'Data otentikasi Google tidak lengkap.' });
+    }
+
+    // Gunakan email sebagai username
+    const username = email.split('@')[0];
+
+    // Cek apakah user sudah ada berdasarkan email atau username
+    let user = queryOne('SELECT * FROM users WHERE username = ?', [email]);
+    if (!user) {
+      user = queryOne('SELECT * FROM users WHERE username = ?', [username]);
+    }
+
+    if (!user) {
+      // Auto-register
+      const hashedPassword = bcrypt.hashSync(uid, 10); // Gunakan uid sebagai dummy password yang kuat
+      const { getLocalDateTime } = require('../utils/time');
+      const now = getLocalDateTime();
+      
+      const result = runQuery(
+        'INSERT INTO users (username, password, full_name, role, photo_url, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [email, hashedPassword, displayName || username, 'user', photoURL, now]
+      );
+      user = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [result.lastInsertRowid]);
+      
+      // Sinkronkan user baru ke Firebase Firestore
+      const { syncUserToFirebase } = require('../services/firebaseService');
+      await syncUserToFirebase(user);
+    } else if (photoURL && user.photo_url !== photoURL) {
+      // Update photo URL jika berubah di profil Google
+      runQuery('UPDATE users SET photo_url = ? WHERE id = ?', [photoURL, user.id]);
+      user.photo_url = photoURL;
+      const { syncUserToFirebase } = require('../services/firebaseService');
+      await syncUserToFirebase(user);
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ token, user: userWithoutPassword });
+  } catch (err) {
+    console.error('Google Login error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat login Google.' });
+  }
+};
+
 // Login
 exports.login = (req, res) => {
   try {

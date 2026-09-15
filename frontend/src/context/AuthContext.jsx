@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../config/firebase';
 
 const AuthContext = createContext();
 
@@ -48,6 +50,31 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const userData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL
+      };
+
+      const data = await authAPI.loginWithGoogle(userData);
+      
+      setToken(data.token);
+      setUser(data.user);
+      sessionStorage.setItem('app_token', data.token);
+      sessionStorage.setItem('app_user', JSON.stringify(data.user));
+      return data;
+    } catch (error) {
+      console.error('Google Sign In Error:', error);
+      throw error;
+    }
+  };
+
   const register = async (userData) => {
     const data = await authAPI.register(userData);
     setToken(data.token);
@@ -79,6 +106,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!token,
         isAdmin,
         login,
+        loginWithGoogle,
         register,
         logout,
       }}
