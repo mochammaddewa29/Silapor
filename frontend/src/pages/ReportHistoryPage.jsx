@@ -103,13 +103,6 @@ export const ReportHistoryPage = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => navigate('/lapor')}
-          className="w-full sm:w-auto justify-center inline-flex items-center gap-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white px-4 py-2.5 text-xs font-bold shadow-sm shadow-blue-500/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shrink-0"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>+ Buat Laporan Baru</span>
-        </button>
       </div>
 
       {/* Filter and Search Bar */}
