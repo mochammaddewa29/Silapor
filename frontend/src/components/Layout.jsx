@@ -23,7 +23,7 @@ export const Layout = () => {
         </main>
 
         <footer className="py-4 text-center text-xs text-gray-400 dark:text-gray-500 border-t border-gray-200/60 dark:border-gray-800">
-          © 2026 SI-LAPOR. Sistem Informasi Pengaduan & Layanan Maintenance Terpadu.
+          © 2026 Lapor JakBan. Layanan Maintenance Terpadu.
         </footer>
       </div>
     </div>

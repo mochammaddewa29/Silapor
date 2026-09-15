@@ -83,9 +83,9 @@ export const LoginPage = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black tracking-wider text-white">SI</span>
+                  <span className="text-2xl font-black tracking-wider text-white">Lapor</span>
                   <span className="rounded bg-[#FFC107] px-2 py-0.5 text-xs font-black uppercase text-[#0B1E3F]">
-                    LAPOR
+                    JakBan
                   </span>
                 </div>
                 <p className="text-xs font-medium text-blue-200">
@@ -121,7 +121,7 @@ export const LoginPage = () => {
 
         {/* Bottom copyright */}
         <div className="relative z-10 pt-8 mt-12 border-t border-white/10 text-xs text-blue-200/80 hidden lg:flex items-center justify-between">
-          <span>© 2026 Sistem Pengaduan Maintenance</span>
+          <span>© 2026 Lapor JakBan</span>
           <span className="font-semibold text-white">Respon Tanggap 24/7</span>
         </div>
       </div>

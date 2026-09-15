@@ -22,7 +22,7 @@ export const Navbar = ({ onOpenSidebar }) => {
       case '/admin/laporan':
         return 'Manajemen Laporan Operasional';
       default:
-        return 'Sistem Pengaduan Maintenance';
+        return 'Lapor JakBan';
     }
   };
 
@@ -42,7 +42,7 @@ export const Navbar = ({ onOpenSidebar }) => {
             {getPageTitle()}
           </h1>
           <p className="hidden sm:block text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
-            Sistem Informasi Pengaduan & Layanan Maintenance
+            Lapor JakBan & Layanan Maintenance
           </p>
         </div>
       </div>

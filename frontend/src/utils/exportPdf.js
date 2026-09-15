@@ -31,7 +31,7 @@ export const exportReportsToPDF = (reports = [], filters = {}) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(11, 30, 63);
-  doc.text('SISTEM PENGADUAN MAINTENANCE & FASILITAS', 14, 14);
+  doc.text('LAPOR JAKBAN', 14, 14);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
@@ -190,7 +190,7 @@ export const exportReportsToPDF = (reports = [], filters = {}) => {
       doc.line(14, pageHeight - 10, pageWidth - 14, pageHeight - 10);
 
       doc.text(
-        'Sistem Pengaduan Maintenance & Fasilitas • Dokumen Resmi Internal Perusahaan',
+        'Lapor JakBan • Dokumen Resmi Internal Perusahaan',
         14,
         pageHeight - 6
       );

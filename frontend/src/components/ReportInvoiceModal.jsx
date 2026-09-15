@@ -90,7 +90,7 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
               </div>
               <div>
                 <h2 className="text-sm sm:text-lg font-black tracking-tight text-gray-900 dark:text-white uppercase">
-                  Sistem Pengaduan Maintenance
+                  Lapor JakBan
                 </h2>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   Tanda Terima Permintaan Perbaikan Fasilitas
@@ -220,7 +220,7 @@ export const ReportInvoiceModal = ({ report, user, isOpen, onClose, onResetForm 
           {/* Footer Notice */}
           <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4 text-center">
             <p className="text-[11px] text-gray-400 dark:text-gray-500">
-              Dokumen ini adalah tanda terima sah dari Sistem Informasi Pengaduan Maintenance & Fasilitas.
+              Dokumen ini adalah tanda terima sah dari Lapor JakBan.
               <br />
               Waktu cetak: {new Date().toLocaleString('id-ID')}
             </p>
