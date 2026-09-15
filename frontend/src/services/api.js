@@ -95,6 +95,10 @@ export const reportsAPI = {
     const response = await api.put(`/reports/${id}/status`, { status });
     return response.data;
   },
+  updatePriority: async (id, priority) => {
+    const response = await api.put(`/reports/${id}/priority`, { priority });
+    return response.data;
+  },
   assignTechnician: async (id, technician) => {
     const response = await api.put(`/reports/${id}/assign`, { technician });
     return response.data;

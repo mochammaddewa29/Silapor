@@ -38,6 +38,7 @@ router.get('/:id/comments', authenticate, reportController.getComments);
 
 // Admin actions
 router.put('/:id/status', authenticate, requireAdmin, reportController.updateStatus);
+router.put('/:id/priority', authenticate, requireAdmin, reportController.updatePriority);
 router.put('/:id/assign', authenticate, requireAdmin, reportController.assignTechnician);
 router.put('/:id/notes', authenticate, requireAdmin, reportController.addRepairNotes);
 router.delete('/:id', authenticate, requireAdmin, reportController.deleteReport);

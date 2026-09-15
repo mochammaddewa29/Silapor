@@ -11,6 +11,7 @@ import { formatDateTime } from '../utils/date';
 export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
   const { isAdmin, user } = useAuth();
   const [status, setStatus] = useState(report?.status || 'Menunggu');
+  const [priority, setPriority] = useState(report?.priority || 'Sedang');
   const [technician, setTechnician] = useState(report?.technician || '');
   const [repairNotes, setRepairNotes] = useState(report?.repair_notes || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +49,9 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
     try {
       if (status !== report.status) {
         await reportsAPI.updateStatus(report.id, status);
+      }
+      if (priority !== report.priority) {
+        await reportsAPI.updatePriority(report.id, priority);
       }
       if (technician !== (report.technician || '')) {
         await reportsAPI.assignTechnician(report.id, technician);
@@ -294,7 +298,7 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Update Status Laporan
@@ -308,6 +312,21 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
                     <option value="Diproses">🔵 Diproses</option>
                     <option value="Selesai">🟢 Selesai</option>
                     <option value="Ditolak">🔴 Ditolak</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Ubah Prioritas
+                  </label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="Rendah">Rendah</option>
+                    <option value="Sedang">Sedang</option>
+                    <option value="Tinggi">Tinggi</option>
                   </select>
                 </div>
 

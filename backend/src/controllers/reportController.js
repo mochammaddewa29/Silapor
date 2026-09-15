@@ -457,6 +457,49 @@ exports.updateStatus = async (req, res) => {
   }
 };
 
+// Update report priority (admin only)
+exports.updatePriority = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+
+    const validPriorities = ['Rendah', 'Sedang', 'Tinggi'];
+    if (!validPriorities.includes(priority)) {
+      return res.status(400).json({ error: 'Prioritas tidak valid. Gunakan: Rendah, Sedang, atau Tinggi.' });
+    }
+
+    const report = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
+    if (!report) {
+      return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
+    }
+
+    const { getLocalDateTime } = require('../utils/time');
+    const now = getLocalDateTime();
+    runQuery('UPDATE reports SET priority = ?, updated_at = ? WHERE id = ?', [priority, now, parseInt(id)]);
+    const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
+
+    // Tambahkan log aktivitas
+    const logAction = `Mengubah prioritas menjadi ${priority}`;
+    const logRes = runQuery(
+      'INSERT INTO report_logs (report_id, user_id, user_name, role, action, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [parseInt(id), req.user.id, req.user.username, req.user.role, logAction, now]
+    );
+    const newLog = queryOne('SELECT * FROM report_logs WHERE id = ?', [logRes.lastInsertRowid]);
+
+    // Sinkronkan prioritas baru ke Firebase Cloud Firestore
+    const { syncReportToFirebase, syncLogToFirebase } = require('../services/firebaseService');
+    await Promise.allSettled([
+      syncReportToFirebase(updated),
+      syncLogToFirebase(newLog, updated.id)
+    ]);
+
+    res.json(updated);
+  } catch (err) {
+    console.error('Update priority error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+};
+
 // Assign technician (admin only - can assign or reset/clear)
 exports.assignTechnician = async (req, res) => {
   try {
