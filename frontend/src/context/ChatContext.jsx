@@ -32,7 +32,16 @@ export const ChatProvider = ({ children }) => {
           console.error('Failed to load users for chat context:', err);
         }
       };
+      
+      // Initial load
       loadUsers();
+
+      // Poll every 10 seconds for new users/latest message changes
+      const intervalId = setInterval(() => {
+        loadUsers();
+      }, 10000);
+
+      return () => clearInterval(intervalId);
     } else {
       // If regular user, their only "chat user" is themselves (Admin responds to them)
       setChatUsers([{ id: user.id, full_name: 'Admin Support' }]);

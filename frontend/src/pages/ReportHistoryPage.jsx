@@ -69,6 +69,26 @@ export const ReportHistoryPage = () => {
     fetchReports();
   }, [statusFilter, categoryFilter, currentPage]);
 
+  // Auto-refresh data laporan setiap 10 detik secara halus
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isInvoiceOpen && document.visibilityState === 'visible') {
+        const params = {};
+        if (statusFilter) params.status = statusFilter;
+        if (categoryFilter) params.category = categoryFilter;
+        if (searchQuery) params.search = searchQuery;
+        params.page = currentPage;
+        params.limit = ITEMS_PER_PAGE;
+        reportsAPI.getAll(params)
+          .then((data) => {
+            if (data?.reports) setReports(data.reports);
+          })
+          .catch(() => {});
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [statusFilter, categoryFilter, searchQuery, isInvoiceOpen, currentPage]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1); // Reset page on search

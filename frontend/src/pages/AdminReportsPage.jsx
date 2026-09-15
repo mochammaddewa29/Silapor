@@ -104,7 +104,7 @@ export const AdminReportsPage = () => {
           })
           .catch(() => {});
       }
-    }, 20000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [statusFilter, categoryFilter, priorityFilter, startDate, endDate, searchQuery, isModalOpen, updatingId, currentPage]);
 
