@@ -73,7 +73,10 @@ const GlobalChatWidget = () => {
               </h3>
               {isAdmin && activeUserId && (
                 <span className="text-[10px] font-mono text-blue-100 block">
-                  @{chatUsers.find(u => u.id === activeUserId)?.username || 'user'}
+                  {(() => {
+                    const uname = chatUsers.find(u => u.id === activeUserId)?.username || 'user';
+                    return uname.includes('@') ? uname : `@${uname}`;
+                  })()}
                 </span>
               )}
             </div>

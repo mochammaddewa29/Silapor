@@ -6,7 +6,7 @@ const { getLocalDateTime } = require('../utils/time');
 exports.getChatUsers = async (req, res) => {
   try {
     const usersRef = collection(db, 'users');
-    const qUsers = query(usersRef, where('role', '!=', 'admin'));
+    const qUsers = query(usersRef, where('role', '==', 'user'));
     const userSnap = await getDocs(qUsers);
     
     let users = [];
