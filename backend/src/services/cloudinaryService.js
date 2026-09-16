@@ -8,9 +8,9 @@ const fs = require('fs');
  * @returns {Promise<string|null>} Secure HTTPS URL dari Cloudinary
  */
 async function uploadToCloudinary(filePath, folder = 'maintenance_reports') {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'yyeijl6c';
-  const apiKey = process.env.CLOUDINARY_API_KEY || '793914174483228';
-  const apiSecret = process.env.CLOUDINARY_API_SECRET || '2bNhnNoH8ZLTU9aiHBj_nBWCQQU';
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'esyotjeb';
+  const apiKey = process.env.CLOUDINARY_API_KEY || '229679954961957';
+  const apiSecret = process.env.CLOUDINARY_API_SECRET || 'bOjxAwqpOxqn0qXdN4mahH-aXuY';
 
   if (!cloudName || !apiKey || !apiSecret) {
     console.warn('[Cloudinary Notice] Kredensial Cloudinary belum diatur. Menggunakan foto lokal.');
