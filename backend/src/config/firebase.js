@@ -10,6 +10,8 @@ const {
   deleteDoc, 
   updateDoc,
   query,
+  where,
+  limit,
   orderBy
 } = require('firebase/firestore');
 
@@ -39,6 +41,8 @@ module.exports = {
   deleteDoc,
   updateDoc,
   query,
+  where,
+  limit,
   orderBy,
   firebaseConfig
 };

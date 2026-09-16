@@ -1,21 +1,48 @@
-const { queryAll, queryOne, runQuery } = require('../config/database');
-const { syncDirectChatToFirebase } = require('../services/firebaseService');
+const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, orderBy } = require('../config/firebase');
+const { v4: uuidv4 } = require('uuid');
 const { getLocalDateTime } = require('../utils/time');
 
 // Get all users who have chat history or just all regular users (Admin only)
 exports.getChatUsers = async (req, res) => {
   try {
-    // Return all users with role = 'user' along with their latest message if any
-    const users = queryAll(`
-      SELECT 
-        u.id, u.username, u.full_name, u.photo_url,
-        (SELECT message FROM direct_chats dc WHERE dc.user_id = u.id ORDER BY created_at DESC LIMIT 1) as latest_message,
-        (SELECT created_at FROM direct_chats dc WHERE dc.user_id = u.id ORDER BY created_at DESC LIMIT 1) as latest_message_time
-      FROM users u
-      WHERE u.role != 'admin'
-      ORDER BY latest_message_time DESC NULLS LAST, u.full_name ASC
-    `);
+    const usersRef = collection(db, 'users');
+    const qUsers = query(usersRef, where('role', '!=', 'admin'));
+    const userSnap = await getDocs(qUsers);
     
+    let users = [];
+    
+    // Fetch latest message for each user
+    for (const userDoc of userSnap.docs) {
+      const u = userDoc.data();
+      
+      const chatsRef = collection(db, `direct_chats/${u.id}/messages`);
+      const qChats = query(chatsRef, orderBy('created_at', 'desc'), require('firebase/firestore').limit(1));
+      const chatSnap = await getDocs(qChats);
+      
+      if (!chatSnap.empty) {
+        const latestChat = chatSnap.docs[0].data();
+        u.latest_message = latestChat.message;
+        u.latest_message_time = latestChat.created_at;
+      } else {
+        u.latest_message = null;
+        u.latest_message_time = null;
+      }
+      users.push(u);
+    }
+    
+    // Sort by latest_message_time desc, then by full_name asc
+    users.sort((a, b) => {
+      if (a.latest_message_time && b.latest_message_time) {
+        return new Date(b.latest_message_time) - new Date(a.latest_message_time);
+      } else if (a.latest_message_time) {
+        return -1;
+      } else if (b.latest_message_time) {
+        return 1;
+      } else {
+        return a.full_name.localeCompare(b.full_name);
+      }
+    });
+
     res.json(users);
   } catch (err) {
     console.error('getChatUsers error:', err);
@@ -34,8 +61,9 @@ exports.sendDirectMessage = async (req, res) => {
     }
 
     // Verify user exists
-    const user = queryOne('SELECT id FROM users WHERE id = ?', [userId]);
-    if (!user) {
+    const userRef = doc(db, 'users', String(userId));
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
       return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
     }
 
@@ -45,19 +73,26 @@ exports.sendDirectMessage = async (req, res) => {
     }
 
     // Fetch sender details
-    const sender = queryOne('SELECT full_name, username FROM users WHERE id = ?', [req.user.id]);
-    const senderName = sender ? (sender.full_name || sender.username) : 'Unknown';
+    const senderRef = doc(db, 'users', String(req.user.id));
+    const senderSnap = await getDoc(senderRef);
+    const senderData = senderSnap.exists() ? senderSnap.data() : null;
+    const senderName = senderData ? (senderData.full_name || senderData.username) : 'Unknown';
+    
     const now = getLocalDateTime();
+    const chatId = uuidv4();
     
-    const result = runQuery(
-      'INSERT INTO direct_chats (user_id, sender_id, sender_name, role, message, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, req.user.id, senderName, req.user.role, message, now]
-    );
+    const chatMsg = {
+      id: chatId,
+      user_id: userId,
+      sender_id: req.user.id,
+      sender_name: senderName,
+      role: req.user.role,
+      message,
+      created_at: now
+    };
 
-    const chatMsg = queryOne('SELECT * FROM direct_chats WHERE id = ?', [result.lastInsertRowid]);
-    
-    // Sync to Firebase
-    await syncDirectChatToFirebase(chatMsg, userId);
+    const chatDocRef = doc(db, `direct_chats/${userId}/messages`, String(chatId));
+    await setDoc(chatDocRef, chatMsg);
 
     res.status(201).json(chatMsg);
   } catch (err) {

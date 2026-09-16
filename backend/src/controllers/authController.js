@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { queryOne, runQuery } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
+const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc } = require('../config/firebase');
+const { getLocalDateTime } = require('../utils/time');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -20,34 +22,39 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'Password minimal 6 karakter.' });
     }
 
-    const existing = queryOne('SELECT id FROM users WHERE username = ?', [username]);
-    if (existing) {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
       return res.status(409).json({ error: 'Username sudah digunakan.' });
     }
 
     const hashedPassword = bcrypt.hashSync(password, 10);
     const userRole = 'user'; // Pendaftaran publik hanya untuk akun pelapor / user biasa
-
-    const { getLocalDateTime } = require('../utils/time');
     const now = getLocalDateTime();
-    const result = runQuery(
-      'INSERT INTO users (username, password, full_name, role, created_at) VALUES (?, ?, ?, ?, ?)',
-      [username, hashedPassword, full_name, userRole, now]
-    );
+    const userId = uuidv4();
 
-    const user = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [result.lastInsertRowid]);
-    
-    // Sinkronkan data user ke Firebase Cloud Firestore
-    const { syncUserToFirebase } = require('../services/firebaseService');
-    await syncUserToFirebase(user);
+    const newUser = {
+      id: userId,
+      username,
+      password: hashedPassword,
+      full_name,
+      role: userRole,
+      photo_url: null,
+      created_at: now
+    };
+
+    await setDoc(doc(db, 'users', String(userId)), newUser);
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: newUser.id, username: newUser.username, role: newUser.role },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    res.status(201).json({ token, user });
+    const { password: _, ...userWithoutPassword } = newUser;
+    res.status(201).json({ token, user: userWithoutPassword });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server.' });
@@ -63,36 +70,42 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ error: 'Data otentikasi Google tidak lengkap.' });
     }
 
-    // Gunakan email sebagai username
     const username = email.split('@')[0];
-
-    // Cek apakah user sudah ada berdasarkan email atau username
-    let user = queryOne('SELECT * FROM users WHERE username = ?', [email]);
-    if (!user) {
-      user = queryOne('SELECT * FROM users WHERE username = ?', [username]);
+    const usersRef = collection(db, 'users');
+    
+    let user = null;
+    const qEmail = query(usersRef, where('username', '==', email));
+    const snapEmail = await getDocs(qEmail);
+    if (!snapEmail.empty) {
+      user = snapEmail.docs[0].data();
+    } else {
+      const qUsername = query(usersRef, where('username', '==', username));
+      const snapUsername = await getDocs(qUsername);
+      if (!snapUsername.empty) {
+        user = snapUsername.docs[0].data();
+      }
     }
 
     if (!user) {
       // Auto-register
-      const hashedPassword = bcrypt.hashSync(uid, 10); // Gunakan uid sebagai dummy password yang kuat
-      const { getLocalDateTime } = require('../utils/time');
+      const hashedPassword = bcrypt.hashSync(uid, 10); 
       const now = getLocalDateTime();
+      const userId = uuidv4();
       
-      const result = runQuery(
-        'INSERT INTO users (username, password, full_name, role, photo_url, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-        [email, hashedPassword, displayName || username, 'user', photoURL, now]
-      );
-      user = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [result.lastInsertRowid]);
+      user = {
+        id: userId,
+        username: email,
+        password: hashedPassword,
+        full_name: displayName || username,
+        role: 'user',
+        photo_url: photoURL || null,
+        created_at: now
+      };
       
-      // Sinkronkan user baru ke Firebase Firestore
-      const { syncUserToFirebase } = require('../services/firebaseService');
-      await syncUserToFirebase(user);
+      await setDoc(doc(db, 'users', String(userId)), user);
     } else if (photoURL && user.photo_url !== photoURL) {
-      // Update photo URL jika berubah di profil Google
-      runQuery('UPDATE users SET photo_url = ? WHERE id = ?', [photoURL, user.id]);
       user.photo_url = photoURL;
-      const { syncUserToFirebase } = require('../services/firebaseService');
-      await syncUserToFirebase(user);
+      await updateDoc(doc(db, 'users', String(user.id)), { photo_url: photoURL });
     }
 
     const token = jwt.sign(
@@ -110,7 +123,7 @@ exports.googleLogin = async (req, res) => {
 };
 
 // Login
-exports.login = (req, res) => {
+exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -118,12 +131,17 @@ exports.login = (req, res) => {
       return res.status(400).json({ error: 'Username dan password wajib diisi.' });
     }
 
-    const user = queryOne('SELECT * FROM users WHERE username = ?', [username]);
-    if (!user) {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
       return res.status(401).json({ error: 'Username atau password salah.' });
     }
 
+    const user = querySnapshot.docs[0].data();
     const validPassword = bcrypt.compareSync(password, user.password);
+    
     if (!validPassword) {
       return res.status(401).json({ error: 'Username atau password salah.' });
     }
@@ -143,13 +161,18 @@ exports.login = (req, res) => {
 };
 
 // Get current user profile
-exports.getMe = (req, res) => {
+exports.getMe = async (req, res) => {
   try {
-    const user = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [req.user.id]);
-    if (!user) {
+    const userRef = doc(db, 'users', String(req.user.id));
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
       return res.status(404).json({ error: 'User tidak ditemukan.' });
     }
-    res.json(user);
+
+    const user = userSnap.data();
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
   } catch (err) {
     console.error('GetMe error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server.' });
@@ -162,22 +185,22 @@ exports.updateProfile = async (req, res) => {
     const { full_name, current_password, new_password, photo_url } = req.body;
     const userId = req.user.id;
 
-    const user = queryOne('SELECT * FROM users WHERE id = ?', [userId]);
-    if (!user) {
+    const userRef = doc(db, 'users', String(userId));
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
       return res.status(404).json({ error: 'User tidak ditemukan.' });
     }
 
-    let updates = [];
-    let params = [];
+    const user = userSnap.data();
+    let updates = {};
 
     if (full_name && full_name.trim() !== '') {
-      updates.push('full_name = ?');
-      params.push(full_name.trim());
+      updates.full_name = full_name.trim();
     }
 
     if (photo_url !== undefined) {
-      updates.push('photo_url = ?');
-      params.push(photo_url);
+      updates.photo_url = photo_url;
     }
 
     if (new_password) {
@@ -191,25 +214,19 @@ exports.updateProfile = async (req, res) => {
       if (new_password.length < 6) {
         return res.status(400).json({ error: 'Password baru minimal 6 karakter.' });
       }
-      const hashedPassword = bcrypt.hashSync(new_password, 10);
-      updates.push('password = ?');
-      params.push(hashedPassword);
+      updates.password = bcrypt.hashSync(new_password, 10);
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updates).length === 0) {
       return res.json({ message: 'Tidak ada data yang diubah.' });
     }
 
-    params.push(userId);
-    runQuery(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    await updateDoc(userRef, updates);
+    const updatedSnap = await getDoc(userRef);
+    const updatedUser = updatedSnap.data();
 
-    const updatedUser = queryOne('SELECT id, username, full_name, role, photo_url, created_at FROM users WHERE id = ?', [userId]);
-    
-    // Sync to Firebase
-    const { syncUserToFirebase } = require('../services/firebaseService');
-    await syncUserToFirebase(updatedUser);
-
-    res.json({ message: 'Profil berhasil diperbarui.', user: updatedUser });
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    res.json({ message: 'Profil berhasil diperbarui.', user: userWithoutPassword });
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server saat memperbarui profil.' });

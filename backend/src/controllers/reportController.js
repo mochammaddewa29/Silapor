@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { queryAll, queryOne, runQuery, getDb, syncFromCloud } = require('../config/database');
-const { syncReportToFirebase, syncUserToFirebase, syncCommentToFirebase, getCommentsFromFirebase, syncLogToFirebase, getLogsFromFirebase } = require('../services/firebaseService');
+const { v4: uuidv4 } = require('uuid');
+const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, deleteDoc, orderBy } = require('../config/firebase');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
 const ExcelJS = require('exceljs');
 
@@ -16,19 +16,27 @@ const generateTicketNumber = () => {
   return `TKT-${randomStr}`;
 };
 
+// Log activity helper
+const createLog = async (reportId, userId, userName, role, action, now) => {
+  const logId = uuidv4();
+  const log = {
+    id: logId,
+    report_id: reportId,
+    user_id: userId,
+    user_name: userName,
+    role,
+    action,
+    created_at: now
+  };
+  await setDoc(doc(db, `reports/${reportId}/logs`, logId), log);
+  return log;
+};
+
 // Direct Report (creates user on the fly, creates report, returns JWT + report)
 exports.directReport = async (req, res) => {
   try {
     const { 
-      reporter_name, 
-      division, 
-      location, 
-      category, 
-      item_name, 
-      description, 
-      priority,
-      username,
-      password 
+      reporter_name, division, location, category, item_name, description, priority, username, password 
     } = req.body;
 
     if (!reporter_name || !location || !item_name || !description) {
@@ -39,7 +47,6 @@ exports.directReport = async (req, res) => {
     const validPriorities = ['Rendah', 'Sedang', 'Tinggi'];
     const reportPriority = validPriorities.includes(priority) ? priority : 'Sedang';
 
-    // Generate or use username
     let userHandle = username ? username.trim().toLowerCase() : '';
     if (!userHandle) {
       const baseHandle = reporter_name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -47,17 +54,30 @@ exports.directReport = async (req, res) => {
       userHandle = `${baseHandle || 'pelapor'}_${randomSuffix}`;
     }
 
-    // Check if user already exists
-    let user = queryOne('SELECT * FROM users WHERE username = ?', [userHandle]);
+    const usersRef = collection(db, 'users');
+    const qUser = query(usersRef, where('username', '==', userHandle));
+    const userSnap = await getDocs(qUser);
+    
+    let user;
+    const now = getLocalDateTime();
 
-    if (!user) {
+    if (userSnap.empty) {
       const rawPassword = password && password.length >= 6 ? password : 'user123';
       const hashedPassword = bcrypt.hashSync(rawPassword, 10);
-      const userRes = runQuery(
-        'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-        [userHandle, hashedPassword, reporter_name, 'user']
-      );
-      user = queryOne('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?', [userRes.lastInsertRowid]);
+      const userId = uuidv4();
+      
+      user = {
+        id: userId,
+        username: userHandle,
+        password: hashedPassword,
+        full_name: reporter_name,
+        role: 'user',
+        photo_url: null,
+        created_at: now
+      };
+      await setDoc(doc(db, 'users', userId), user);
+    } else {
+      user = userSnap.docs[0].data();
     }
 
     let photo_url = null;
@@ -66,21 +86,29 @@ exports.directReport = async (req, res) => {
       photo_url = cloudinaryUrl || `/uploads/${req.file.filename}`;
     }
 
-    const now = getLocalDateTime();
     const ticketNumber = generateTicketNumber();
-    const result = runQuery(
-      `INSERT INTO reports (ticket_number, user_id, reporter_name, division, location, category, item_name, description, photo_url, priority, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Menunggu', ?, ?)`,
-      [ticketNumber, user.id, reporter_name, division || 'Umum', location, reportCategory, item_name, description, photo_url, reportPriority, now, now]
-    );
+    const reportId = uuidv4();
+    
+    const report = {
+      id: reportId,
+      ticket_number: ticketNumber,
+      user_id: user.id,
+      reporter_name,
+      division: division || 'Umum',
+      location,
+      category: reportCategory,
+      item_name,
+      description,
+      photo_url,
+      priority: reportPriority,
+      status: 'Menunggu',
+      technician: null,
+      repair_notes: null,
+      created_at: now,
+      updated_at: now
+    };
 
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [result.lastInsertRowid]);
-
-    // Sinkronkan akun dan laporan ke Firebase Realtime Database
-    await Promise.allSettled([
-      syncUserToFirebase(user),
-      syncReportToFirebase(report)
-    ]);
+    await setDoc(doc(db, 'reports', reportId), report);
 
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
@@ -111,29 +139,31 @@ exports.addComment = async (req, res) => {
       return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
     }
 
-    // Verify report exists
-    const report = queryOne('SELECT id FROM reports WHERE id = ?', [reportId]);
-    if (!report) {
+    const reportRef = doc(db, 'reports', String(reportId));
+    const reportSnap = await getDoc(reportRef);
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
-    // Fetch sender_name since full_name is not in JWT payload
-    const user = queryOne('SELECT full_name, username FROM users WHERE id = ?', [req.user.id]);
+    const userRef = doc(db, 'users', String(req.user.id));
+    const userSnap = await getDoc(userRef);
+    const user = userSnap.exists() ? userSnap.data() : null;
     const senderName = user ? (user.full_name || user.username) : 'Unknown';
 
-    const { getLocalDateTime } = require('../utils/time');
     const now = getLocalDateTime();
+    const commentId = uuidv4();
     
-    const result = runQuery(
-      'INSERT INTO report_comments (report_id, user_id, sender_name, role, message, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [reportId, req.user.id, senderName, req.user.role, message, now]
-    );
+    const comment = {
+      id: commentId,
+      report_id: reportId,
+      user_id: req.user.id,
+      sender_name: senderName,
+      role: req.user.role,
+      message,
+      created_at: now
+    };
 
-    const comment = queryOne('SELECT * FROM report_comments WHERE id = ?', [result.lastInsertRowid]);
-    
-    // Sync to Firebase
-    await syncCommentToFirebase(comment, reportId);
-
+    await setDoc(doc(db, `reports/${reportId}/comments`, commentId), comment);
     res.status(201).json(comment);
   } catch (err) {
     console.error('Add comment error:', err);
@@ -145,17 +175,12 @@ exports.addComment = async (req, res) => {
 exports.getComments = async (req, res) => {
   try {
     const reportId = req.params.id;
+    const commentsRef = collection(db, `reports/${reportId}/comments`);
+    // orderBy created_at asc
+    const q = query(commentsRef, orderBy('created_at', 'asc'));
+    const snap = await getDocs(q);
     
-    // First try from SQLite
-    let comments = queryAll('SELECT * FROM report_comments WHERE report_id = ? ORDER BY created_at ASC', [reportId]);
-    
-    // If empty in SQLite, maybe try from Firebase (for backward compatibility if needed)
-    if (comments.length === 0) {
-      comments = await getCommentsFromFirebase(reportId);
-      // Sort them by created_at
-      comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    }
-    
+    const comments = snap.docs.map(d => d.data());
     res.json(comments);
   } catch (err) {
     console.error('Get comments error:', err);
@@ -163,19 +188,18 @@ exports.getComments = async (req, res) => {
   }
 };
 
-// Public Comments (for non-logged in users tracking their tickets)
+// Public Comments
 exports.getPublicComments = async (req, res) => {
   try {
-    const ticketId = req.params.ticketId;
-    const report = queryOne('SELECT id FROM reports WHERE id = ?', [ticketId]);
-    if (!report) return res.status(404).json({ error: 'Tiket tidak ditemukan' });
+    const ticketId = req.params.ticketId; // this is the report document ID for public, since frontend passes report.id
+    const reportSnap = await getDoc(doc(db, 'reports', ticketId));
+    if (!reportSnap.exists()) return res.status(404).json({ error: 'Tiket tidak ditemukan' });
 
-    let comments = queryAll('SELECT * FROM report_comments WHERE report_id = ? ORDER BY created_at ASC', [ticketId]);
-    if (comments.length === 0) {
-      const { getCommentsFromFirebase } = require('../services/firebaseService');
-      comments = await getCommentsFromFirebase(ticketId);
-      comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    }
+    const commentsRef = collection(db, `reports/${ticketId}/comments`);
+    const q = query(commentsRef, orderBy('created_at', 'asc'));
+    const snap = await getDocs(q);
+    
+    const comments = snap.docs.map(d => d.data());
     res.json(comments);
   } catch (err) {
     console.error('Get public comments error:', err);
@@ -192,22 +216,24 @@ exports.addPublicComment = async (req, res) => {
       return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
     }
 
-    const report = queryOne('SELECT id, user_id, reporter_name FROM reports WHERE id = ?', [ticketId]);
-    if (!report) return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
-
-    const { getLocalDateTime } = require('../utils/time');
+    const reportSnap = await getDoc(doc(db, 'reports', ticketId));
+    if (!reportSnap.exists()) return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
+    
+    const report = reportSnap.data();
     const now = getLocalDateTime();
+    const commentId = uuidv4();
     
-    const result = runQuery(
-      'INSERT INTO report_comments (report_id, user_id, sender_name, role, message, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [ticketId, report.user_id, report.reporter_name + " (Pelapor)", "user", message, now]
-    );
+    const comment = {
+      id: commentId,
+      report_id: ticketId,
+      user_id: report.user_id,
+      sender_name: report.reporter_name + " (Pelapor)",
+      role: "user",
+      message,
+      created_at: now
+    };
 
-    const comment = queryOne('SELECT * FROM report_comments WHERE id = ?', [result.lastInsertRowid]);
-    
-    const { syncCommentToFirebase } = require('../services/firebaseService');
-    await syncCommentToFirebase(comment, ticketId);
-
+    await setDoc(doc(db, `reports/${ticketId}/comments`, commentId), comment);
     res.status(201).json(comment);
   } catch (err) {
     console.error('Add public comment error:', err);
@@ -243,16 +269,28 @@ exports.createReport = async (req, res) => {
 
     const now = getLocalDateTime();
     const ticketNumber = generateTicketNumber();
-    const result = runQuery(
-      `INSERT INTO reports (ticket_number, user_id, reporter_name, division, location, category, item_name, description, photo_url, priority, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Menunggu', ?, ?)`,
-      [ticketNumber, req.user.id, reporter_name, division || '', location, category, item_name, description, photo_url, reportPriority, now, now]
-    );
+    const reportId = uuidv4();
 
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [result.lastInsertRowid]);
-    
-    // Sinkronkan laporan ke Firebase Realtime Database
-    await syncReportToFirebase(report);
+    const report = {
+      id: reportId,
+      ticket_number: ticketNumber,
+      user_id: req.user.id,
+      reporter_name,
+      division: division || '',
+      location,
+      category,
+      item_name,
+      description,
+      photo_url,
+      priority: reportPriority,
+      status: 'Menunggu',
+      technician: null,
+      repair_notes: null,
+      created_at: now,
+      updated_at: now
+    };
+
+    await setDoc(doc(db, 'reports', reportId), report);
     res.status(201).json(report);
   } catch (err) {
     console.error('Create report error:', err);
@@ -263,69 +301,83 @@ exports.createReport = async (req, res) => {
 // Get reports (admin sees all, user sees own)
 exports.getReports = async (req, res) => {
   try {
-    await syncFromCloud();
-
     const { status, category, priority, search, start_date, end_date, page = 1, limit = 50 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    let conditions = [];
-    let params = [];
-
+    let reportsRef = collection(db, 'reports');
+    // For Firestore, we fetch data and do some filtering in memory if complex, 
+    // but we can use index for simple ones. To avoid complex indexing requirement:
+    // We fetch all matching base constraints, then sort & paginate in memory.
+    // If not admin, filter by user_id
+    
+    let constraints = [];
     if (req.user.role !== 'admin') {
-      conditions.push('r.user_id = ?');
-      params.push(req.user.id);
+      constraints.push(where('user_id', '==', req.user.id));
     }
+    if (status) constraints.push(where('status', '==', status));
+    if (priority) constraints.push(where('priority', '==', priority));
+    
+    // Note: 'Lainnya%' wildcard isn't directly supported in Firestore in a simple way without '>=', '<='
+    // We'll filter category and dates in memory to keep it simple and avoid missing index errors.
+    
+    let q = query(reportsRef, ...constraints);
+    const snap = await getDocs(q);
+    
+    let reports = snap.docs.map(d => d.data());
 
-    if (status) {
-      conditions.push('r.status = ?');
-      params.push(status);
-    }
+    // In-memory filtering for what Firestore can't do easily without composite indexes
     if (category) {
-      if (category === 'Lainnya') {
-        conditions.push("(r.category = 'Lainnya' OR r.category LIKE 'Lainnya:%')");
-      } else {
-        conditions.push('r.category = ?');
-        params.push(category);
-      }
+      reports = reports.filter(r => {
+        if (category === 'Lainnya') return r.category === 'Lainnya' || r.category.startsWith('Lainnya:');
+        return r.category === category;
+      });
     }
-    if (priority) {
-      conditions.push('r.priority = ?');
-      params.push(priority);
-    }
-    if (search) {
-      conditions.push("(r.reporter_name LIKE ? OR r.item_name LIKE ? OR r.description LIKE ? OR r.location LIKE ?)");
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
-    }
+    
     if (start_date) {
-      conditions.push('DATE(r.created_at) >= ?');
-      params.push(start_date);
+      reports = reports.filter(r => r.created_at.split('T')[0] >= start_date);
     }
+    
     if (end_date) {
-      conditions.push('DATE(r.created_at) <= ?');
-      params.push(end_date);
+      reports = reports.filter(r => r.created_at.split('T')[0] <= end_date);
+    }
+    
+    if (search) {
+      const s = search.toLowerCase();
+      reports = reports.filter(r => 
+        (r.reporter_name && r.reporter_name.toLowerCase().includes(s)) ||
+        (r.item_name && r.item_name.toLowerCase().includes(s)) ||
+        (r.description && r.description.toLowerCase().includes(s)) ||
+        (r.location && r.location.toLowerCase().includes(s))
+      );
     }
 
-    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+    // Sort descending by created_at
+    reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // Count total
-    const countRow = queryOne(`SELECT COUNT(*) as total FROM reports r ${whereClause}`, params);
-    const total = countRow ? countRow.total : 0;
+    // Get unique user IDs to fetch their details
+    const userIds = [...new Set(reports.map(r => r.user_id))];
+    const usersMap = {};
+    if (userIds.length > 0) {
+      // Fetch users in chunks if necessary, but assuming < 30 per page
+      const usersSnap = await getDocs(collection(db, 'users'));
+      usersSnap.forEach(d => {
+        const u = d.data();
+        usersMap[u.id] = u;
+      });
+    }
 
-    // Get reports with user join
-    const allParams = [...params, parseInt(limit), offset];
-    const reports = queryAll(
-      `SELECT r.*, u.username, u.full_name as user_full_name
-       FROM reports r
-       LEFT JOIN users u ON r.user_id = u.id
-       ${whereClause}
-       ORDER BY r.created_at DESC
-       LIMIT ? OFFSET ?`,
-      allParams
-    );
+    reports = reports.map(r => ({
+      ...r,
+      username: usersMap[r.user_id]?.username,
+      user_full_name: usersMap[r.user_id]?.full_name
+    }));
+
+    const total = reports.length;
+    // Paginate in memory
+    const paginatedReports = reports.slice(offset, offset + parseInt(limit));
 
     res.json({
-      reports,
+      reports: paginatedReports,
       pagination: {
         total,
         page: parseInt(page),
@@ -342,23 +394,24 @@ exports.getReports = async (req, res) => {
 // Get single report
 exports.getReport = async (req, res) => {
   try {
-    await syncFromCloud();
-
     const { id } = req.params;
-    const report = queryOne(
-      `SELECT r.*, u.username, u.full_name as user_full_name
-       FROM reports r
-       LEFT JOIN users u ON r.user_id = u.id
-       WHERE r.id = ?`,
-      [parseInt(id)]
-    );
+    const reportSnap = await getDoc(doc(db, 'reports', String(id)));
 
-    if (!report) {
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
+    
+    const report = reportSnap.data();
 
     if (req.user.role !== 'admin' && report.user_id !== req.user.id) {
       return res.status(403).json({ error: 'Akses ditolak.' });
+    }
+
+    const userSnap = await getDoc(doc(db, 'users', String(report.user_id)));
+    if (userSnap.exists()) {
+      const u = userSnap.data();
+      report.username = u.username;
+      report.user_full_name = u.full_name;
     }
 
     res.json(report);
@@ -368,38 +421,36 @@ exports.getReport = async (req, res) => {
   }
 };
 
-// Public ticket tracker (no authentication required)
+// Public ticket tracker
 exports.trackReport = async (req, res) => {
   try {
-    await syncFromCloud();
-
     const { ticketId } = req.params;
     if (!ticketId) {
       return res.status(400).json({ error: 'Nomor tiket wajib diisi.' });
     }
 
-    // Coba cari dari ticket_number dulu (case insensitive)
-    let report = queryOne(
-      `SELECT r.id, r.ticket_number, r.reporter_name, r.division, r.location, r.category, r.item_name, 
-              r.description, r.photo_url, r.priority, r.status, r.technician, 
-              r.repair_notes, r.created_at, r.updated_at
-       FROM reports r
-       WHERE LOWER(r.ticket_number) = ? OR LOWER(r.ticket_number) = ?`,
-      [ticketId.toLowerCase(), `tkt-${ticketId.toLowerCase()}`]
-    );
+    let report = null;
+    
+    // Search by ticket_number first
+    const reportsRef = collection(db, 'reports');
+    // Try exact matches (TKT-XXXX)
+    const upperTicketId = ticketId.toUpperCase();
+    let q = query(reportsRef, where('ticket_number', '==', upperTicketId));
+    let snap = await getDocs(q);
+    
+    if (snap.empty) {
+      // Try with 'TKT-' prefix if user forgot it
+      q = query(reportsRef, where('ticket_number', '==', `TKT-${upperTicketId}`));
+      snap = await getDocs(q);
+    }
 
-    if (!report) {
-      // Extract numerical ID from string (e.g. "TKT-00012" -> 12, or "12" -> 12) fallback
-      const cleanId = parseInt(String(ticketId).replace(/\D/g, ''), 10);
-      if (!isNaN(cleanId) && cleanId > 0) {
-        report = queryOne(
-          `SELECT r.id, r.ticket_number, r.reporter_name, r.division, r.location, r.category, r.item_name, 
-                  r.description, r.photo_url, r.priority, r.status, r.technician, 
-                  r.repair_notes, r.created_at, r.updated_at
-           FROM reports r
-           WHERE r.id = ?`,
-          [cleanId]
-        );
+    if (!snap.empty) {
+      report = snap.docs[0].data();
+    } else {
+      // Try fetching by document ID just in case
+      const docSnap = await getDoc(doc(db, 'reports', ticketId));
+      if (docSnap.exists()) {
+        report = docSnap.data();
       }
     }
 
@@ -427,28 +478,17 @@ exports.updateStatus = async (req, res) => {
       return res.status(400).json({ error: 'Status tidak valid. Gunakan: Menunggu, Diproses, Selesai, atau Ditolak.' });
     }
 
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
-    if (!report) {
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
     const now = getLocalDateTime();
-    runQuery('UPDATE reports SET status = ?, updated_at = ? WHERE id = ?', [status, now, parseInt(id)]);
-    const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
+    await updateDoc(reportRef, { status, updated_at: now });
+    const updated = (await getDoc(reportRef)).data();
 
-    // Tambahkan log aktivitas
-    const logAction = `Mengubah status menjadi ${status}`;
-    const logRes = runQuery(
-      'INSERT INTO report_logs (report_id, user_id, user_name, role, action, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [parseInt(id), req.user.id, req.user.username, req.user.role, logAction, now]
-    );
-    const newLog = queryOne('SELECT * FROM report_logs WHERE id = ?', [logRes.lastInsertRowid]);
-
-    // Sinkronkan status baru ke Firebase Cloud Firestore
-    await Promise.allSettled([
-      syncReportToFirebase(updated),
-      syncLogToFirebase(newLog, updated.id)
-    ]);
+    await createLog(id, req.user.id, req.user.username, req.user.role, `Mengubah status menjadi ${status}`, now);
 
     res.json(updated);
   } catch (err) {
@@ -468,30 +508,17 @@ exports.updatePriority = async (req, res) => {
       return res.status(400).json({ error: 'Prioritas tidak valid. Gunakan: Rendah, Sedang, atau Tinggi.' });
     }
 
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
-    if (!report) {
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
-    const { getLocalDateTime } = require('../utils/time');
     const now = getLocalDateTime();
-    runQuery('UPDATE reports SET priority = ?, updated_at = ? WHERE id = ?', [priority, now, parseInt(id)]);
-    const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
+    await updateDoc(reportRef, { priority, updated_at: now });
+    const updated = (await getDoc(reportRef)).data();
 
-    // Tambahkan log aktivitas
-    const logAction = `Mengubah prioritas menjadi ${priority}`;
-    const logRes = runQuery(
-      'INSERT INTO report_logs (report_id, user_id, user_name, role, action, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [parseInt(id), req.user.id, req.user.username, req.user.role, logAction, now]
-    );
-    const newLog = queryOne('SELECT * FROM report_logs WHERE id = ?', [logRes.lastInsertRowid]);
-
-    // Sinkronkan prioritas baru ke Firebase Cloud Firestore
-    const { syncReportToFirebase, syncLogToFirebase } = require('../services/firebaseService');
-    await Promise.allSettled([
-      syncReportToFirebase(updated),
-      syncLogToFirebase(newLog, updated.id)
-    ]);
+    await createLog(id, req.user.id, req.user.username, req.user.role, `Mengubah prioritas menjadi ${priority}`, now);
 
     res.json(updated);
   } catch (err) {
@@ -500,35 +527,25 @@ exports.updatePriority = async (req, res) => {
   }
 };
 
-// Assign technician (admin only - can assign or reset/clear)
+// Assign technician (admin only)
 exports.assignTechnician = async (req, res) => {
   try {
     const { id } = req.params;
     const { technician } = req.body;
 
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
-    if (!report) {
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
     const techValue = (technician && typeof technician === 'string' && technician.trim()) ? technician.trim() : null;
     const now = getLocalDateTime();
-    runQuery('UPDATE reports SET technician = ?, updated_at = ? WHERE id = ?', [techValue, now, parseInt(id)]);
-    const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
+    await updateDoc(reportRef, { technician: techValue, updated_at: now });
+    const updated = (await getDoc(reportRef)).data();
 
-    // Tambahkan log aktivitas
     const actionText = techValue ? `Menugaskan teknisi: ${techValue}` : 'Menghapus penugasan teknisi';
-    const logRes = runQuery(
-      'INSERT INTO report_logs (report_id, user_id, user_name, role, action, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [parseInt(id), req.user.id, req.user.username, req.user.role, actionText, now]
-    );
-    const newLog = queryOne('SELECT * FROM report_logs WHERE id = ?', [logRes.lastInsertRowid]);
-
-    // Sinkronkan penugasan teknisi ke Firebase Cloud Firestore
-    await Promise.allSettled([
-      syncReportToFirebase(updated),
-      syncLogToFirebase(newLog, updated.id)
-    ]);
+    await createLog(id, req.user.id, req.user.username, req.user.role, actionText, now);
 
     res.json(updated);
   } catch (err) {
@@ -541,50 +558,34 @@ exports.assignTechnician = async (req, res) => {
 exports.getLogs = async (req, res) => {
   try {
     const { id } = req.params;
+    const logsRef = collection(db, `reports/${id}/logs`);
+    const q = query(logsRef, orderBy('created_at', 'asc'));
+    const snap = await getDocs(q);
     
-    // Check local SQLite first
-    let logs = queryAll('SELECT * FROM report_logs WHERE report_id = ? ORDER BY created_at ASC', [parseInt(id)]);
-    
-    // If not found in SQLite (e.g. after serverless restart), fetch from Firebase
-    if (!logs || logs.length === 0) {
-      logs = await getLogsFromFirebase(parseInt(id));
-      if (logs && logs.length > 0) {
-        // Hydrate to local SQLite for future queries
-        logs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        for (const lg of logs) {
-          runQuery(`
-            INSERT OR IGNORE INTO report_logs (id, report_id, user_id, user_name, role, action, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-          `, [lg.id, lg.report_id, lg.user_id, lg.user_name, lg.role, lg.action, lg.created_at]);
-        }
-      }
-    }
-
-    res.json(logs || []);
+    const logs = snap.docs.map(d => d.data());
+    res.json(logs);
   } catch (err) {
     console.error('Get logs error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server saat mengambil riwayat aktivitas.' });
   }
 };
 
-// Add repair notes (admin only - can update or reset/clear)
+// Add repair notes (admin only)
 exports.addRepairNotes = async (req, res) => {
   try {
     const { id } = req.params;
     const { repair_notes } = req.body;
 
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
-    if (!report) {
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
     const notesValue = (repair_notes && typeof repair_notes === 'string' && repair_notes.trim()) ? repair_notes.trim() : null;
     const now = getLocalDateTime();
-    runQuery('UPDATE reports SET repair_notes = ?, updated_at = ? WHERE id = ?', [notesValue, now, parseInt(id)]);
-    const updated = queryOne('SELECT * FROM reports WHERE id = ?', [parseInt(id)]);
-
-    // Sinkronkan catatan perbaikan ke Firebase Cloud Firestore
-    await syncReportToFirebase(updated);
+    await updateDoc(reportRef, { repair_notes: notesValue, updated_at: now });
+    const updated = (await getDoc(reportRef)).data();
 
     res.json(updated);
   } catch (err) {
@@ -597,35 +598,47 @@ exports.addRepairNotes = async (req, res) => {
 exports.deleteReport = async (req, res) => {
   try {
     const { id } = req.params;
-    const reportId = parseInt(id, 10);
-    const report = queryOne('SELECT * FROM reports WHERE id = ?', [reportId]);
-    if (!report) {
+    
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+    if (!reportSnap.exists()) {
       return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
     }
 
+    const report = reportSnap.data();
     const userId = report.user_id;
 
-    runQuery('DELETE FROM reports WHERE id = ?', [reportId]);
-    const { deleteReportFromFirebase, deleteUserFromFirebase } = require('../services/firebaseService');
-    await deleteReportFromFirebase(reportId);
+    // Delete subcollections first (comments, logs) to prevent ghosts
+    const commentsRef = collection(db, `reports/${id}/comments`);
+    const commentsSnap = await getDocs(commentsRef);
+    for (const c of commentsSnap.docs) await deleteDoc(c.ref);
 
-    // Opsi 1: Otomatis bersihkan akun user jika bukan admin dan sudah tidak memiliki laporan lain
+    const logsRef = collection(db, `reports/${id}/logs`);
+    const logsSnap = await getDocs(logsRef);
+    for (const l of logsSnap.docs) await deleteDoc(l.ref);
+
+    await deleteDoc(reportRef);
+
+    // Auto-cleanup user if they have no other reports
     let userCleanedUp = false;
     if (userId) {
-      const user = queryOne('SELECT id, role, username FROM users WHERE id = ?', [userId]);
-      if (user && user.role !== 'admin' && user.username !== 'admin') {
-        const remaining = queryOne('SELECT COUNT(*) as count FROM reports WHERE user_id = ?', [userId]);
-        if (!remaining || remaining.count === 0) {
-          runQuery('DELETE FROM users WHERE id = ?', [userId]);
-          await deleteUserFromFirebase(userId);
-          userCleanedUp = true;
-          console.log(`[Auto-cleanup] User #${userId} (${user.username}) berhasil dihapus otomatis karena tidak memiliki laporan lain.`);
+      const userSnap = await getDoc(doc(db, 'users', String(userId)));
+      if (userSnap.exists()) {
+        const user = userSnap.data();
+        if (user.role !== 'admin' && user.username !== 'admin') {
+          // Check if they have other reports
+          const qOther = query(collection(db, 'reports'), where('user_id', '==', userId));
+          const snapOther = await getDocs(qOther);
+          if (snapOther.empty) {
+            await deleteDoc(doc(db, 'users', String(userId)));
+            userCleanedUp = true;
+          }
         }
       }
     }
 
     res.json({ 
-      message: `Laporan #${reportId} berhasil dihapus.` + (userCleanedUp ? ' Akun pelapor juga otomatis dibersihkan karena tidak memiliki laporan lain.' : '')
+      message: `Laporan #${id} berhasil dihapus.` + (userCleanedUp ? ' Akun pelapor juga otomatis dibersihkan karena tidak memiliki laporan lain.' : '')
     });
   } catch (err) {
     console.error('Delete report error:', err);
@@ -633,142 +646,82 @@ exports.deleteReport = async (req, res) => {
   }
 };
 
-// Dashboard statistics (admin sees all, regular user sees their own, supports date range filtering)
+// Dashboard statistics
 exports.getDashboardStats = async (req, res) => {
   try {
-    await syncFromCloud();
-
     const { start_date, end_date } = req.query;
     const isUser = req.user && req.user.role !== 'admin';
 
-    // Build conditions for reports table
-    let baseConditions = [];
-    let baseParams = [];
+    let constraints = [];
+    if (isUser) constraints.push(where('user_id', '==', req.user.id));
+    
+    let q = query(collection(db, 'reports'), ...constraints);
+    const snap = await getDocs(q);
+    let allReports = snap.docs.map(d => d.data());
 
-    if (isUser) {
-      baseConditions.push('user_id = ?');
-      baseParams.push(req.user.id);
-    }
-    if (start_date) {
-      baseConditions.push('DATE(created_at) >= ?');
-      baseParams.push(start_date);
-    }
-    if (end_date) {
-      baseConditions.push('DATE(created_at) <= ?');
-      baseParams.push(end_date);
-    }
+    // In-memory filter for dates
+    if (start_date) allReports = allReports.filter(r => r.created_at.split('T')[0] >= start_date);
+    if (end_date) allReports = allReports.filter(r => r.created_at.split('T')[0] <= end_date);
 
-    const buildWhere = (extraCondition = '', extraParams = []) => {
-      const allConds = extraCondition ? [...baseConditions, extraCondition] : [...baseConditions];
-      const whereStr = allConds.length > 0 ? 'WHERE ' + allConds.join(' AND ') : '';
-      return { whereStr, params: [...baseParams, ...extraParams] };
-    };
+    // Calc summary
+    let pending = 0, processing = 0, completed = 0, rejected = 0;
+    let totalResolutionHours = 0;
+    let categoryMap = {}, locationMap = {}, monthMap = {}, priorityMap = {}, statusMap = {};
 
-    const totalQuery = buildWhere();
-    const totalRow = queryOne(`SELECT COUNT(*) as count FROM reports ${totalQuery.whereStr}`, totalQuery.params);
+    allReports.forEach(r => {
+      if (r.status === 'Menunggu') pending++;
+      else if (r.status === 'Diproses') processing++;
+      else if (r.status === 'Selesai') {
+        completed++;
+        const dCreated = new Date(r.created_at);
+        const dUpdated = new Date(r.updated_at);
+        const diffHours = (dUpdated - dCreated) / (1000 * 60 * 60);
+        totalResolutionHours += diffHours;
+      }
+      else if (r.status === 'Ditolak') rejected++;
 
-    const pendingQuery = buildWhere("status = 'Menunggu'");
-    const pendingRow = queryOne(`SELECT COUNT(*) as count FROM reports ${pendingQuery.whereStr}`, pendingQuery.params);
+      // Category
+      categoryMap[r.category] = (categoryMap[r.category] || 0) + 1;
+      // Location
+      locationMap[r.location] = (locationMap[r.location] || 0) + 1;
+      // Priority
+      priorityMap[r.priority] = (priorityMap[r.priority] || 0) + 1;
+      // Status
+      statusMap[r.status] = (statusMap[r.status] || 0) + 1;
+      // Month
+      const monthStr = r.created_at.substring(0, 7); // YYYY-MM
+      monthMap[monthStr] = (monthMap[monthStr] || 0) + 1;
+    });
 
-    const processingQuery = buildWhere("status = 'Diproses'");
-    const processingRow = queryOne(`SELECT COUNT(*) as count FROM reports ${processingQuery.whereStr}`, processingQuery.params);
+    const byCategory = Object.keys(categoryMap).map(k => ({ category: k, count: categoryMap[k] })).sort((a,b)=>b.count-a.count);
+    const byLocation = Object.keys(locationMap).map(k => ({ location: k, count: locationMap[k] })).sort((a,b)=>b.count-a.count).slice(0, 10);
+    const byPriority = Object.keys(priorityMap).map(k => ({ priority: k, count: priorityMap[k] }));
+    const byStatus = Object.keys(statusMap).map(k => ({ status: k, count: statusMap[k] }));
+    const byMonth = Object.keys(monthMap).map(k => ({ month: k, count: monthMap[k] })).sort((a,b)=>a.month.localeCompare(b.month));
 
-    const completedQuery = buildWhere("status = 'Selesai'");
-    const completedRow = queryOne(`SELECT COUNT(*) as count FROM reports ${completedQuery.whereStr}`, completedQuery.params);
+    const avgResolutionHours = completed > 0 ? (totalResolutionHours / completed) : 0;
 
-    const rejectedQuery = buildWhere("status = 'Ditolak'");
-    const rejectedRow = queryOne(`SELECT COUNT(*) as count FROM reports ${rejectedQuery.whereStr}`, rejectedQuery.params);
+    // Recent reports
+    allReports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const recentReports = allReports.slice(0, 5);
 
-    const catQuery = buildWhere();
-    const byCategory = queryAll(`
-      SELECT category, COUNT(*) as count
-      FROM reports
-      ${catQuery.whereStr}
-      GROUP BY category
-      ORDER BY count DESC
-    `, catQuery.params);
-
-    const monthQuery = (start_date || end_date)
-      ? buildWhere()
-      : buildWhere("created_at >= date('now', '-6 months')");
-
-    const byMonth = queryAll(`
-      SELECT 
-        strftime('%Y-%m', created_at) as month,
-        COUNT(*) as count
-      FROM reports
-      ${monthQuery.whereStr}
-      GROUP BY month
-      ORDER BY month ASC
-    `, monthQuery.params);
-
-    const prioQuery = buildWhere();
-    const byPriority = queryAll(`
-      SELECT priority, COUNT(*) as count
-      FROM reports
-      ${prioQuery.whereStr}
-      GROUP BY priority
-    `, prioQuery.params);
-
-    const statusQuery = buildWhere();
-    const byStatus = queryAll(`
-      SELECT status, COUNT(*) as count
-      FROM reports
-      ${statusQuery.whereStr}
-      GROUP BY status
-    `, statusQuery.params);
-
-    const locationQuery = buildWhere();
-    const byLocation = queryAll(`
-      SELECT location, COUNT(*) as count
-      FROM reports
-      ${locationQuery.whereStr}
-      GROUP BY location
-      ORDER BY count DESC
-      LIMIT 10
-    `, locationQuery.params);
-
-    const resQuery = buildWhere("status = 'Selesai'");
-    const resolutionRow = queryOne(`
-      SELECT AVG((julianday(updated_at) - julianday(created_at)) * 24) as avg_hours
-      FROM reports
-      ${resQuery.whereStr}
-    `, resQuery.params);
-
-    // Recent reports with joined user
-    let recentConds = [];
-    let recentParams = [];
-    if (isUser) {
-      recentConds.push('r.user_id = ?');
-      recentParams.push(req.user.id);
-    }
-    if (start_date) {
-      recentConds.push('DATE(r.created_at) >= ?');
-      recentParams.push(start_date);
-    }
-    if (end_date) {
-      recentConds.push('DATE(r.created_at) <= ?');
-      recentParams.push(end_date);
-    }
-    const recentWhere = recentConds.length > 0 ? 'WHERE ' + recentConds.join(' AND ') : '';
-
-    const recentReports = queryAll(`
-      SELECT r.*, u.full_name as user_full_name
-      FROM reports r
-      LEFT JOIN users u ON r.user_id = u.id
-      ${recentWhere}
-      ORDER BY r.created_at DESC
-      LIMIT 5
-    `, recentParams);
+    // Fetch user details for recent reports
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const usersMap = {};
+    usersSnap.forEach(d => { usersMap[d.data().id] = d.data(); });
+    
+    recentReports.forEach(r => {
+      r.user_full_name = usersMap[r.user_id]?.full_name || 'Unknown';
+    });
 
     res.json({
       summary: {
-        total: totalRow?.count || 0,
-        pending: pendingRow?.count || 0,
-        processing: processingRow?.count || 0,
-        completed: completedRow?.count || 0,
-        rejected: rejectedRow?.count || 0,
-        avgResolutionHours: resolutionRow?.avg_hours ? Math.round(resolutionRow.avg_hours * 10) / 10 : 0
+        total: allReports.length,
+        pending,
+        processing,
+        completed,
+        rejected,
+        avgResolutionHours: Math.round(avgResolutionHours * 10) / 10
       },
       byCategory,
       byLocation,
@@ -783,320 +736,138 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// Export to CSV
-exports.exportCSV = (req, res) => {
+// Export CSV (ExcelJS)
+exports.exportCSV = async (req, res) => {
   try {
     const { status, category, priority, start_date, end_date } = req.query;
-    let conditions = [];
-    let params = [];
+    
+    const snap = await getDocs(collection(db, 'reports'));
+    let reports = snap.docs.map(d => d.data());
 
-    if (status) {
-      conditions.push('r.status = ?');
-      params.push(status);
-    }
+    if (status) reports = reports.filter(r => r.status === status);
+    if (priority) reports = reports.filter(r => r.priority === priority);
     if (category) {
-      if (category === 'Lainnya') {
-        conditions.push("(r.category = 'Lainnya' OR r.category LIKE 'Lainnya:%')");
-      } else {
-        conditions.push('r.category = ?');
-        params.push(category);
-      }
+      reports = reports.filter(r => {
+        if (category === 'Lainnya') return r.category === 'Lainnya' || r.category.startsWith('Lainnya:');
+        return r.category === category;
+      });
     }
-    if (priority) {
-      conditions.push('r.priority = ?');
-      params.push(priority);
-    }
-    if (start_date) {
-      conditions.push('DATE(r.created_at) >= ?');
-      params.push(start_date);
-    }
-    if (end_date) {
-      conditions.push('DATE(r.created_at) <= ?');
-      params.push(end_date);
-    }
+    if (start_date) reports = reports.filter(r => r.created_at.split('T')[0] >= start_date);
+    if (end_date) reports = reports.filter(r => r.created_at.split('T')[0] <= end_date);
 
-    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
-
-    const reports = queryAll(`
-      SELECT r.id, r.reporter_name, r.division, r.location, r.category, r.item_name,
-             r.description, r.priority, r.status, r.technician, r.repair_notes,
-             r.created_at, r.updated_at, u.full_name as pelapor_akun
-      FROM reports r
-      LEFT JOIN users u ON r.user_id = u.id
-      ${whereClause}
-      ORDER BY r.created_at DESC
-    `, params);
-
-    const headers = ['No', 'ID Tiket / No. Invoice', 'ID Database', 'Nama Pelapor', 'Divisi', 'Lokasi / Kerusakan', 'Kategori', 'Nama Barang', 'Deskripsi', 'Prioritas', 'Status', 'Teknisi', 'Catatan Perbaikan', 'Tanggal Laporan', 'Terakhir Update', 'Akun Pelapor'];
-    const csvRows = [headers.join(',')];
-
-    let no = 1;
-    for (const r of reports) {
-      const ticketId = `#TKT-${String(r.id).padStart(5, '0')}`;
-      const row = [
-        no++,
-        `"${ticketId}"`,
-        r.id,
-        `"${(r.reporter_name || '').replace(/"/g, '""')}"`,
-        `"${(r.division || '-').replace(/"/g, '""')}"`,
-        `"${(r.location || '').replace(/"/g, '""')}"`,
-        r.category,
-        `"${(r.item_name || '').replace(/"/g, '""')}"`,
-        `"${(r.description || '').replace(/"/g, '""')}"`,
-        r.priority,
-        r.status,
-        `"${(r.technician || '').replace(/"/g, '""')}"`,
-        `"${(r.repair_notes || '').replace(/"/g, '""')}"`,
-        r.created_at,
-        r.updated_at,
-        `"${(r.pelapor_akun || '').replace(/"/g, '""')}"`
-      ];
-      csvRows.push(row.join(','));
-    }
-
-    // sep=, tells Excel to split columns by comma even on Indonesian / European regional settings!
-    const csv = 'sep=,\r\n' + csvRows.join('\r\n');
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename=laporan-pengaduan-${new Date().toISOString().slice(0,10)}.csv`);
-    res.send('\uFEFF' + csv);
-  } catch (err) {
-    console.error('Export CSV error:', err);
-    res.status(500).json({ error: 'Terjadi kesalahan server.' });
-  }
-};
-
-// Export to Excel (.xlsx) with clean layout, styling, and column widths
-exports.exportExcel = async (req, res) => {
-  try {
-    const { status, category, priority, start_date, end_date } = req.query;
-    let conditions = [];
-    let params = [];
-
-    if (status) {
-      conditions.push('r.status = ?');
-      params.push(status);
-    }
-    if (category) {
-      if (category === 'Lainnya') {
-        conditions.push("(r.category = 'Lainnya' OR r.category LIKE 'Lainnya:%')");
-      } else {
-        conditions.push('r.category = ?');
-        params.push(category);
-      }
-    }
-    if (priority) {
-      conditions.push('r.priority = ?');
-      params.push(priority);
-    }
-    if (start_date) {
-      conditions.push('DATE(r.created_at) >= ?');
-      params.push(start_date);
-    }
-    if (end_date) {
-      conditions.push('DATE(r.created_at) <= ?');
-      params.push(end_date);
-    }
-
-    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
-
-    const reports = queryAll(`
-      SELECT r.id, r.reporter_name, r.division, r.location, r.category, r.item_name,
-             r.description, r.priority, r.status, r.technician, r.repair_notes,
-             r.created_at, r.updated_at, u.full_name as pelapor_akun
-      FROM reports r
-      LEFT JOIN users u ON r.user_id = u.id
-      ${whereClause}
-      ORDER BY r.created_at DESC
-    `, params);
+    reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Sistem Pengaduan Maintenance';
-    workbook.created = new Date();
+    const worksheet = workbook.addWorksheet('Laporan Maintenance');
 
-    const worksheet = workbook.addWorksheet('Rekap Pengaduan', {
-      views: [{ showGridLines: true }]
-    });
-
-    // 1. Title Banner (A1:O1)
-    worksheet.mergeCells('A1:O1');
-    const titleCell = worksheet.getCell('A1');
-    titleCell.value = 'REKAPITULASI LAPORAN PENGADUAN & PERBAIKAN FASILITAS';
-    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-    titleCell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF0F2C59' } // Elegant Deep PLN Blue
-    };
-    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(1).height = 36;
-
-    // 2. Info / Filter subtitle (A2:O2)
-    worksheet.mergeCells('A2:O2');
-    const subCell = worksheet.getCell('A2');
-    const filterInfo = [
-      `Waktu Unduh: ${new Date().toLocaleString('id-ID')}`,
-      status ? `Status: ${status}` : 'Status: Semua Status',
-      category ? `Kategori: ${category}` : 'Kategori: Semua Kategori',
-      priority ? `Prioritas: ${priority}` : 'Prioritas: Semua Prioritas',
-      (start_date || end_date) ? `Periode: ${start_date || '...'} s/d ${end_date || '...'}` : 'Periode: Semua Data',
-      `Total Data: ${reports.length} Laporan`
-    ].join('   |   ');
-    subCell.value = filterInfo;
-    subCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FF334155' } };
-    subCell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFF1F5F9' }
-    };
-    subCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(2).height = 24;
-
-    // Spacer row
-    worksheet.getRow(3).height = 10;
-
-    // 3. Table Column Headers
-    const columnDefinitions = [
-      { key: 'no', header: 'NO', width: 6 },
-      { key: 'ticket_id', header: 'NO. INVOICE / TIKET', width: 22 },
-      { key: 'created_at', header: 'TANGGAL LAPORAN', width: 20 },
-      { key: 'reporter_name', header: 'NAMA PELAPOR', width: 22 },
-      { key: 'pelapor_akun', header: 'AKUN PELAPOR', width: 18 },
-      { key: 'division', header: 'DIVISI', width: 16 },
-      { key: 'location', header: 'LOKASI KERUSAKAN', width: 24 },
-      { key: 'category', header: 'KATEGORI', width: 18 },
-      { key: 'item_name', header: 'NAMA BARANG', width: 22 },
-      { key: 'description', header: 'DESKRIPSI KELUHAN', width: 36 },
-      { key: 'priority', header: 'PRIORITAS', width: 14 },
-      { key: 'status', header: 'STATUS', width: 16 },
-      { key: 'technician', header: 'TEKNISI', width: 20 },
-      { key: 'repair_notes', header: 'CATATAN PERBAIKAN', width: 34 },
-      { key: 'updated_at', header: 'TERAKHIR UPDATE', width: 20 },
+    worksheet.columns = [
+      { header: 'No. Tiket', key: 'ticket_number', width: 15 },
+      { header: 'Tanggal Laporan', key: 'created_at', width: 25 },
+      { header: 'Nama Pelapor', key: 'reporter_name', width: 25 },
+      { header: 'Divisi', key: 'division', width: 20 },
+      { header: 'Lokasi/Ruangan', key: 'location', width: 20 },
+      { header: 'Kategori', key: 'category', width: 15 },
+      { header: 'Nama Barang', key: 'item_name', width: 25 },
+      { header: 'Deskripsi Masalah', key: 'description', width: 40 },
+      { header: 'Prioritas', key: 'priority', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Teknisi', key: 'technician', width: 20 },
+      { header: 'Catatan Perbaikan', key: 'repair_notes', width: 40 },
     ];
 
-    const headerRow = worksheet.getRow(4);
-    headerRow.height = 28;
-
-    columnDefinitions.forEach((col, idx) => {
-      const cell = headerRow.getCell(idx + 1);
-      cell.value = col.header;
-      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF1E3A8A' } // Dark Blue
-      };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      cell.border = {
-        top: { style: 'medium', color: { argb: 'FF334155' } },
-        bottom: { style: 'medium', color: { argb: 'FF334155' } },
-        left: { style: 'thin', color: { argb: 'FF475569' } },
-        right: { style: 'thin', color: { argb: 'FF475569' } },
-      };
-      worksheet.getColumn(idx + 1).width = col.width;
-    });
-
-    // 4. Data Rows
-    reports.forEach((r, idx) => {
-      const rowNum = 5 + idx;
-      const dataRow = worksheet.getRow(rowNum);
-      dataRow.height = 26;
-
-      const ticketId = `#TKT-${String(r.id).padStart(5, '0')}`;
-      const isEven = idx % 2 === 0;
-      const rowBgColor = isEven ? 'FFFFFFFF' : 'FFF8FAFC';
-
-      const values = [
-        idx + 1,
-        ticketId,
-        r.created_at || '-',
-        r.reporter_name || '-',
-        r.pelapor_akun || '-',
-        r.division || '-',
-        r.location || '-',
-        r.category || '-',
-        r.item_name || '-',
-        r.description || '-',
-        r.priority || '-',
-        r.status || '-',
-        r.technician || '-',
-        r.repair_notes || '-',
-        r.updated_at || '-',
-      ];
-
-      values.forEach((val, colIdx) => {
-        const cell = dataRow.getCell(colIdx + 1);
-        cell.value = val;
-        cell.font = { name: 'Segoe UI', size: 9.5 };
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: rowBgColor }
-        };
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        };
-
-        // Alignments and highlights
-        if (colIdx === 0) { // NO
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        } else if (colIdx === 1) { // Ticket ID
-          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1E40AF' } };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        } else if (colIdx === 2 || colIdx === 14) { // Dates
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        } else if (colIdx === 10) { // Priority
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          if (r.priority === 'Darurat' || r.priority === 'Tinggi') {
-            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF991B1B' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
-          } else if (r.priority === 'Sedang') {
-            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF854D0E' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
-          } else {
-            cell.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF166534' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
-          }
-        } else if (colIdx === 11) { // Status
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          if (r.status === 'Selesai') {
-            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF166534' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
-          } else if (r.status === 'Diproses') {
-            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1E40AF' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
-          } else if (r.status === 'Ditolak') {
-            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF991B1B' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
-          } else {
-            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF854D0E' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
-          }
-        } else if (colIdx === 9 || colIdx === 13) { // Description & Notes
-          cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
-        } else {
-          cell.alignment = { vertical: 'middle', horizontal: 'left' };
-        }
+    reports.forEach(r => {
+      worksheet.addRow({
+        ticket_number: r.ticket_number,
+        created_at: new Date(r.created_at).toLocaleString('id-ID'),
+        reporter_name: r.reporter_name,
+        division: r.division || '-',
+        location: r.location,
+        category: r.category,
+        item_name: r.item_name,
+        description: r.description,
+        priority: r.priority,
+        status: r.status,
+        technician: r.technician || '-',
+        repair_notes: r.repair_notes || '-'
       });
     });
 
-    // Auto-filter on header row (row 4)
-    worksheet.autoFilter = {
-      from: 'A4',
-      to: 'O4'
-    };
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=laporan-maintenance.csv');
+    
+    await workbook.csv.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export CSV error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan saat export CSV.' });
+  }
+};
 
-    const filename = `laporan-pengaduan-${new Date().toISOString().slice(0, 10)}.xlsx`;
+// Export Excel
+exports.exportExcel = async (req, res) => {
+  try {
+    const { status, category, priority, start_date, end_date } = req.query;
+    
+    const snap = await getDocs(collection(db, 'reports'));
+    let reports = snap.docs.map(d => d.data());
+
+    if (status) reports = reports.filter(r => r.status === status);
+    if (priority) reports = reports.filter(r => r.priority === priority);
+    if (category) {
+      reports = reports.filter(r => {
+        if (category === 'Lainnya') return r.category === 'Lainnya' || r.category.startsWith('Lainnya:');
+        return r.category === category;
+      });
+    }
+    if (start_date) reports = reports.filter(r => r.created_at.split('T')[0] >= start_date);
+    if (end_date) reports = reports.filter(r => r.created_at.split('T')[0] <= end_date);
+
+    reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Laporan Maintenance');
+
+    worksheet.columns = [
+      { header: 'No. Tiket', key: 'ticket_number', width: 15 },
+      { header: 'Tanggal Laporan', key: 'created_at', width: 20 },
+      { header: 'Nama Pelapor', key: 'reporter_name', width: 25 },
+      { header: 'Divisi', key: 'division', width: 20 },
+      { header: 'Lokasi/Ruangan', key: 'location', width: 20 },
+      { header: 'Kategori', key: 'category', width: 15 },
+      { header: 'Nama Barang', key: 'item_name', width: 25 },
+      { header: 'Deskripsi Masalah', key: 'description', width: 40 },
+      { header: 'Prioritas', key: 'priority', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Teknisi', key: 'technician', width: 20 },
+      { header: 'Catatan Perbaikan', key: 'repair_notes', width: 40 },
+      { header: 'URL Foto', key: 'photo_url', width: 30 }
+    ];
+
+    reports.forEach((r, index) => {
+      worksheet.addRow({
+        ticket_number: r.ticket_number,
+        created_at: new Date(r.created_at).toLocaleString('id-ID'),
+        reporter_name: r.reporter_name,
+        division: r.division || '-',
+        location: r.location,
+        category: r.category,
+        item_name: r.item_name,
+        description: r.description,
+        priority: r.priority,
+        status: r.status,
+        technician: r.technician || '-',
+        repair_notes: r.repair_notes || '-',
+        photo_url: r.photo_url || '-'
+      });
+    });
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
+    res.setHeader('Content-Disposition', 'attachment; filename=laporan-maintenance.xlsx');
+    
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
     console.error('Export Excel error:', err);
-    res.status(500).json({ error: 'Terjadi kesalahan server saat membuat file Excel.' });
+    res.status(500).json({ error: 'Terjadi kesalahan saat export Excel.' });
   }
 };

@@ -5,9 +5,6 @@ try {
 } catch (e) {}
 const express = require('express');
 const cors = require('cors');
-const { initDatabase } = require('./config/database');
-const seed = require('./seed');
-
 const app = express();
 
 // Permissive CORS so Vercel and local both work effortlessly
@@ -23,31 +20,7 @@ const os = require('os');
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/uploads', express.static(path.join(os.tmpdir(), 'maintenance_uploads')));
 
-// Lazy init DB for both local server and Vercel serverless functions
-let initialized = false;
-let initPromise = null;
-
-async function ensureInitialized() {
-  if (initialized) return;
-  if (!initPromise) {
-    initPromise = (async () => {
-      await initDatabase();
-      seed();
-      initialized = true;
-    })();
-  }
-  await initPromise;
-}
-
-app.use(async (req, res, next) => {
-  try {
-    await ensureInitialized();
-    next();
-  } catch (err) {
-    console.error('Failed to initialize database:', err);
-    next(err);
-  }
-});
+// We no longer need local DB init for Vercel functions, Firebase handles it natively
 
 // API Routes (mounted on both /api/... and root /... for maximum compatibility)
 const authRoutes = require('./routes/authRoutes');
@@ -88,5 +61,4 @@ app.use((err, req, res, next) => {
 });
 
 app.app = app;
-app.ensureInitialized = ensureInitialized;
 module.exports = app;
