@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { 
   Zap, 
@@ -23,7 +23,6 @@ export const LoginPage = () => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  // Redirect if already authenticated
   if (isAuthenticated) {
     return <Navigate to={isAdmin ? "/dashboard" : "/riwayat"} replace />;
   }
@@ -63,88 +62,62 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex flex-col lg:grid lg:grid-cols-12 transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-200">
       
-      {/* ─────────────────────────────────────────────────────────────
-          BAGIAN KIRI (Branding + Informasi Singkat)
-         ───────────────────────────────────────────────────────────── */}
-      <div className="lg:col-span-6 xl:col-span-7 bg-gradient-to-br from-[#0B1E3F] via-[#0E2A59] to-[#1E88E5] text-white p-6 sm:p-12 flex flex-col justify-between relative overflow-hidden">
-        
-        {/* Subtle decorative glow circles */}
-        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-blue-400/15 blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-[#FFC107]/15 blur-3xl pointer-events-none"></div>
+      {/* Decorative Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-[#0B1E3F] via-[#0E2A59] to-[#1E88E5] opacity-100 dark:opacity-20 transition-opacity duration-200"></div>
+      <div className="absolute top-10 left-10 w-96 h-96 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#FFC107]/20 blur-3xl pointer-events-none"></div>
 
-        <div className="relative z-10 space-y-8">
-          {/* Logo & Application Name */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFC107] text-[#0B1E3F] shadow-lg shadow-amber-500/20 font-black">
-                <Zap className="h-7 w-7 fill-[#0B1E3F] text-[#0B1E3F]" />
+      <div className="w-full max-w-lg relative z-10 space-y-6">
+        
+        {/* Top Header Controls (Dark Mode) */}
+        <div className="flex justify-end">
+          <button
+            onClick={toggleTheme}
+            title={isDark ? 'Mode Terang' : 'Mode Gelap'}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/50 hover:bg-white/80 dark:bg-slate-800/50 dark:hover:bg-slate-800 backdrop-blur-sm text-slate-700 dark:text-white transition-all shadow-sm border border-slate-200 dark:border-slate-700"
+          >
+            {isDark ? <Sun className="h-5 w-5 text-[#FFC107]" /> : <Moon className="h-5 w-5 text-blue-600" />}
+          </button>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-[2rem] border border-slate-200/80 dark:border-[#334155] bg-white dark:bg-[#1E293B] shadow-2xl shadow-blue-900/10 dark:shadow-none overflow-hidden transition-all duration-200">
+          
+          {/* Card Header (Branding) */}
+          <div className="bg-gradient-to-br from-[#0B1E3F] to-[#1E88E5] p-8 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-blue-900/20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]"></div>
+            
+            <div className="relative z-10 flex flex-col items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFC107] shadow-lg shadow-amber-500/20 font-black mb-4">
+                <Zap className="h-8 w-8 fill-[#0B1E3F] text-[#0B1E3F]" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black tracking-wider text-white">Lapor</span>
-                  <span className="rounded bg-[#FFC107] px-2 py-0.5 text-xs font-black uppercase text-[#0B1E3F]">
-                    JakBan
-                  </span>
-                </div>
-                <p className="text-xs font-medium text-blue-200">
-                  Maintenance & Kerusakan Fasilitas
-                </p>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-3xl font-black tracking-wider text-white">Lapor</span>
+                <span className="rounded bg-[#FFC107] px-2 py-0.5 text-sm font-black uppercase text-[#0B1E3F]">
+                  JakBan
+                </span>
               </div>
+              <p className="text-sm font-medium text-blue-100/90">
+                Sistem Pelaporan Terpadu & Terintegrasi
+              </p>
+            </div>
+          </div>
+
+          {/* Card Body (Forms) */}
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                Selamat Datang Kembali
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                Silakan login untuk melanjutkan ke dashboard.
+              </p>
             </div>
 
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleTheme}
-              title={isDark ? 'Mode Terang' : 'Mode Gelap'}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors duration-200"
-            >
-              {isDark ? <Sun className="h-5 w-5 text-[#FFC107]" /> : <Moon className="h-5 w-5 text-blue-200" />}
-            </button>
-          </div>
-
-          {/* Headline & Subtext */}
-          <div className="pt-8 sm:pt-16 space-y-4">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold text-blue-100 backdrop-blur-sm border border-white/10">
-              <span className="h-2 w-2 rounded-full bg-[#FFC107] animate-pulse"></span>
-              Portal Resmi Internal
-            </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white max-w-2xl">
-              Sistem Pelaporan Terpadu & Terintegrasi
-            </h1>
-            <p className="text-sm sm:text-base text-blue-100/90 leading-relaxed max-w-xl">
-              Masuk untuk membuat aduan baru terkait fasilitas, memantau status pengerjaan secara real-time, atau berinteraksi langsung dengan teknisi yang bertugas.
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom copyright */}
-        <div className="relative z-10 pt-8 mt-12 border-t border-white/10 text-xs text-blue-200/80 hidden lg:flex items-center justify-between">
-          <span>© 2026 Lapor JakBan</span>
-          <span className="font-semibold text-white">Respon Tanggap 24/7</span>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          BAGIAN KANAN (Form Login)
-         ───────────────────────────────────────────────────────────── */}
-      <div className="lg:col-span-6 xl:col-span-5 p-6 sm:p-12 flex items-center justify-center">
-        <div className="w-full max-w-md space-y-6">
-          
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-              Selamat Datang Kembali
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-              Silakan login untuk melanjutkan ke dashboard Anda.
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200/80 dark:border-[#334155] bg-white dark:bg-[#1E293B] p-6 sm:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-none transition-all duration-200">
-            
             {error && (
-              <div className="mb-6 flex items-center gap-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 p-4 text-sm font-semibold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+              <div className="mb-6 flex items-center gap-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 p-4 text-sm font-semibold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="h-5 w-5 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -155,7 +128,7 @@ export const LoginPage = () => {
               type="button"
               onClick={handleGoogleLogin}
               disabled={googleLoading || loading}
-              className="w-full flex items-center justify-center gap-3 rounded-2xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-3.5 text-sm font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-3.5 text-sm font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm disabled:opacity-50"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path
@@ -178,12 +151,14 @@ export const LoginPage = () => {
               <span>{googleLoading ? 'Menghubungkan...' : 'Lanjutkan dengan Google'}</span>
             </button>
 
-            <div className="relative my-8">
+            <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white dark:bg-[#1E293B] px-4 text-slate-500">ATAU LOGIN MANUAL (ADMIN)</span>
+                <span className="bg-white dark:bg-[#1E293B] px-4 text-slate-500 font-medium tracking-wide">
+                  ATAU LOGIN MANUAL (ADMIN)
+                </span>
               </div>
             </div>
 
@@ -201,7 +176,7 @@ export const LoginPage = () => {
                     placeholder="Masukkan username"
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
+                    className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
                   />
                 </div>
               </div>
@@ -218,7 +193,7 @@ export const LoginPage = () => {
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
+                    className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
                   />
                 </div>
               </div>
@@ -226,13 +201,18 @@ export const LoginPage = () => {
               <button
                 type="submit"
                 disabled={loading || googleLoading}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E88E5] hover:bg-blue-700 text-white py-3.5 px-4 text-sm font-bold shadow-lg shadow-blue-500/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1E3F] to-[#1E88E5] hover:from-[#0E2A59] hover:to-blue-600 text-white py-3.5 px-4 text-sm font-bold shadow-lg shadow-blue-500/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer mt-2"
               >
                 <ArrowRight className="h-5 w-5" />
                 <span>{loading ? 'Memproses...' : 'Masuk Manual'}</span>
               </button>
             </form>
           </div>
+          
+          <div className="bg-slate-50 dark:bg-slate-900/50 p-4 text-center border-t border-slate-100 dark:border-slate-800">
+             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">© 2026 Lapor JakBan - Respon Tanggap 24/7</span>
+          </div>
+
         </div>
       </div>
     </div>
