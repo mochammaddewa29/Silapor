@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { 
-  Zap, 
-  Lock, 
-  User, 
-  AlertCircle, 
+import {
+  Zap,
+  Lock,
+  User,
+  AlertCircle,
   ArrowRight,
-  Sun, 
+  Sun,
   Moon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -63,14 +63,14 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-200">
-      
+
       {/* Decorative Background Elements */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-[#0B1E3F] via-[#0E2A59] to-[#1E88E5] opacity-100 dark:opacity-20 transition-opacity duration-200"></div>
       <div className="absolute top-10 left-10 w-96 h-96 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#FFC107]/20 blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-lg relative z-10 space-y-6">
-        
+
         {/* Top Header Controls (Dark Mode) */}
         <div className="flex justify-end">
           <button
@@ -84,11 +84,11 @@ export const LoginPage = () => {
 
         {/* Card */}
         <div className="rounded-[2rem] border border-slate-200/80 dark:border-[#334155] bg-white dark:bg-[#1E293B] shadow-2xl shadow-blue-900/10 dark:shadow-none overflow-hidden transition-all duration-200">
-          
+
           {/* Card Header (Branding) */}
           <div className="bg-gradient-to-br from-[#0B1E3F] to-[#1E88E5] p-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-blue-900/20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]"></div>
-            
+
             <div className="relative z-10 flex flex-col items-center justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFC107] shadow-lg shadow-amber-500/20 font-black mb-4">
                 <Zap className="h-8 w-8 fill-[#0B1E3F] text-[#0B1E3F]" />
@@ -208,9 +208,9 @@ export const LoginPage = () => {
               </button>
             </form>
           </div>
-          
+
           <div className="bg-slate-50 dark:bg-slate-900/50 p-4 text-center border-t border-slate-100 dark:border-slate-800">
-             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">© 2026 Lapor JakBan - Respon Tanggap 24/7</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">© 2026 Lapor JakBan - Respon Tanggap 24/7</span>
           </div>
 
         </div>
