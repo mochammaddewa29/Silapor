@@ -48,12 +48,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sistem Pengaduan Maintenance API berjalan' });
 });
 
-// Serve frontend static files
-app.use(express.static(path.join(__dirname, '../../frontend/dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
-});
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
