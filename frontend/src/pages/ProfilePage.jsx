@@ -86,6 +86,8 @@ const ProfilePage = () => {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  const isGoogleUser = user?.username?.includes('@');
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -244,56 +246,60 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700/50"></div>
-                
-                <div className="space-y-5">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
-                      <Key className="h-4 w-4 text-blue-500" /> Ganti Password
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                      Kosongkan bagian ini jika Anda tidak ingin mengubah password.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Password Saat Ini
-                    </label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                {!isGoogleUser && (
+                  <>
+                    <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700/50"></div>
+                    
+                    <div className="space-y-5">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+                          <Key className="h-4 w-4 text-blue-500" /> Ganti Password
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                          Kosongkan bagian ini jika Anda tidak ingin mengubah password.
+                        </p>
                       </div>
-                      <input
-                        type="password"
-                        name="current_password"
-                        value={formData.current_password}
-                        onChange={handleChange}
-                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
-                        placeholder="Masukkan password Anda saat ini"
-                      />
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Password Baru
-                    </label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                          Password Saat Ini
+                        </label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                          </div>
+                          <input
+                            type="password"
+                            name="current_password"
+                            value={formData.current_password}
+                            onChange={handleChange}
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                            placeholder="Masukkan password Anda saat ini"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type="password"
-                        name="new_password"
-                        value={formData.new_password}
-                        onChange={handleChange}
-                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
-                        placeholder="Masukkan password baru (min. 6 karakter)"
-                      />
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                          Password Baru
+                        </label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                          </div>
+                          <input
+                            type="password"
+                            name="new_password"
+                            value={formData.new_password}
+                            onChange={handleChange}
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                            placeholder="Masukkan password baru (min. 6 karakter)"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700/50 flex justify-end">
                   <button
