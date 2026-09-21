@@ -26,6 +26,7 @@ import PriorityBadge from '../components/PriorityBadge';
 import ReportDetailModal from '../components/ReportDetailModal';
 import { formatDate } from '../utils/date';
 import { exportReportsToPDF } from '../utils/exportPdf';
+import { TableSkeleton } from '../components/SkeletonLoader';
 
 export const AdminReportsPage = () => {
   const { user } = useAuth();
@@ -431,14 +432,7 @@ export const AdminReportsPage = () => {
       {/* Wide Table Layout (Clean & Spacious) */}
       <div className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#1E293B] shadow-xs overflow-hidden">
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="flex flex-col items-center gap-2.5">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-amber-400"></div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Memuat data pengaduan...
-              </p>
-            </div>
-          </div>
+          <TableSkeleton rows={5} />
         ) : reports.length > 0 ? (
           <>
             {/* Desktop Table View (lg screens and up) */}

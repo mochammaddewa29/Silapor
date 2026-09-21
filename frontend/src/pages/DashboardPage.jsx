@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { reportsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { DashboardSkeleton } from '../components/SkeletonLoader';
 
 export const DashboardPage = () => {
   const [stats, setStats] = useState(null);
@@ -70,16 +71,7 @@ export const DashboardPage = () => {
   };
 
   if (loading && !stats) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-600 border-t-amber-400"></div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Menyiapkan ringkasan dashboard...
-          </p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const pendingCount = stats?.summary?.pending || 0;

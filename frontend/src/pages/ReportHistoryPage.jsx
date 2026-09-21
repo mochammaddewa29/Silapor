@@ -21,6 +21,8 @@ import ReportInvoiceModal from '../components/ReportInvoiceModal';
 import { formatDate } from '../utils/date';
 import { useAuth } from '../context/AuthContext';
 
+import { CardSkeleton } from '../components/SkeletonLoader';
+
 export const ReportHistoryPage = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -190,14 +192,7 @@ export const ReportHistoryPage = () => {
 
       {/* Reports Card Grid (Clean & Spacious Card View) */}
       {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="flex flex-col items-center gap-2.5">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-amber-400"></div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Memuat riwayat pengaduan Anda...
-            </p>
-          </div>
-        </div>
+        <CardSkeleton count={6} />
       ) : reports.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
