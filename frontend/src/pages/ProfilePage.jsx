@@ -86,7 +86,7 @@ const ProfilePage = () => {
       <div className="rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-[#1E293B]/80 shadow-xl shadow-slate-200/20 dark:shadow-none overflow-hidden relative transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40">
         
         {/* Decorative Background Elements */}
-        <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 opacity-100 overflow-hidden">
+        <div className="relative w-full h-32 sm:h-48 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 opacity-100 overflow-hidden">
           <div className="absolute inset-0 bg-black/10 mix-blend-overlay"></div>
           <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/20 blur-3xl rounded-full"></div>
           <div className="absolute top-10 -left-10 w-40 h-40 bg-white/20 blur-3xl rounded-full"></div>
@@ -97,45 +97,45 @@ const ProfilePage = () => {
         
         {/* Avatar & Header Section */}
         <div className="px-6 sm:px-10 relative flex flex-col sm:flex-row sm:items-end sm:justify-between pb-8 border-b border-slate-100 dark:border-slate-800/60">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 -mt-16 sm:-mt-12 relative z-10 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 -mt-12 sm:-mt-16 relative z-10 text-center sm:text-left">
             
             {/* Avatar Profile */}
-            <div className="group relative h-28 w-28 sm:h-32 sm:w-32 rounded-3xl bg-white dark:bg-[#1E293B] p-2 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10 transition-transform duration-500 hover:scale-105">
-              <div className="h-full w-full rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-black shadow-inner relative overflow-hidden">
+            <div className="group relative h-24 w-24 sm:h-32 sm:w-32 rounded-3xl bg-white dark:bg-[#1E293B] p-2 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10 transition-transform duration-500 hover:scale-105">
+              <div className="h-full w-full rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl sm:text-4xl font-black shadow-inner relative overflow-hidden">
                 {/* Shine effect */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
                 {getInitials(user?.full_name)}
               </div>
               
-              <button className="absolute -bottom-1 -right-1 h-10 w-10 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors z-20 hover:scale-110 active:scale-95 duration-200">
+              <button className="absolute -bottom-1 -right-1 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors z-20 hover:scale-110 active:scale-95 duration-200">
                 <Camera className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="pb-2 mt-3 sm:mt-0">
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center justify-center sm:justify-start gap-2.5">
+            <div className="pb-1 mt-3 sm:mt-0">
+              <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center justify-center sm:justify-start gap-2.5">
                 {user?.full_name}
                 {user?.role === 'admin' && (
-                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" title="Administrator">
-                    <CheckCircle2 className="h-4 w-4" />
+                  <div className="flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" title="Administrator">
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   </div>
                 )}
               </h2>
-              <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <AtSign className="h-3.5 w-3.5 opacity-70" />
+              <div className="flex items-center justify-center sm:justify-start gap-2 mt-1.5">
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <AtSign className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-70" />
                   {user?.username}
                 </p>
                 <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <Shield className="h-3.5 w-3.5 opacity-70" />
+                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-70" />
                   {user?.role === 'admin' ? 'Administrator' : 'Pengguna Biasa'}
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="pb-2 hidden sm:block">
+          <div className="pb-2 mt-4 sm:mt-0 hidden sm:block">
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 dark:bg-slate-800/50 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-700 shadow-sm backdrop-blur-sm">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
