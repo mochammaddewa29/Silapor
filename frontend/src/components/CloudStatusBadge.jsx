@@ -79,18 +79,18 @@ export const CloudStatusBadge = () => {
               </div>
             </div>
 
-            {/* Item 2: Cloudinary */}
+            {/* Item 2: Vercel Blob */}
             <div className="flex items-start gap-2.5 p-2 rounded-xl bg-gray-50 dark:bg-gray-700/50">
               <ImageIcon className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-800 dark:text-gray-200">Cloudinary Media</span>
+                  <span className="font-bold text-gray-800 dark:text-gray-200">Vercel Blob Media</span>
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">
                     Aktif
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                  Cloud Name: {import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'esyotjeb'}
+                  Storage: Vercel Blob Store
                 </p>
               </div>
             </div>

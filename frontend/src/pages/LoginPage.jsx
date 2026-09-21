@@ -30,6 +30,17 @@ export const LoginPage = () => {
     return <Navigate to={isAdmin ? "/dashboard" : "/riwayat"} replace />;
   }
 
+  const parseErrorMessage = (err, defaultMsg) => {
+    if (!err) return defaultMsg;
+    if (typeof err === 'string') return err;
+    if (typeof err.response?.data?.error === 'string') return err.response.data.error;
+    if (typeof err.response?.data?.error === 'object' && err.response.data.error?.message) {
+      return err.response.data.error.message;
+    }
+    if (err.message && typeof err.message === 'string') return err.message;
+    return defaultMsg;
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -40,11 +51,7 @@ export const LoginPage = () => {
       navigate(data.user.role === 'admin' ? '/dashboard' : '/riwayat');
     } catch (err) {
       console.error('Login error:', err);
-      if (!err.response) {
-        setError('Gagal terhubung ke server backend. Periksa koneksi internet Anda.');
-      } else {
-        setError(err.response?.data?.error || 'Username atau password salah.');
-      }
+      setError(parseErrorMessage(err, 'Username atau password salah.'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +65,7 @@ export const LoginPage = () => {
       navigate(data.user.role === 'admin' ? '/dashboard' : '/riwayat');
     } catch (err) {
       console.error('Google Login error:', err);
-      setError('Gagal login dengan Google. Pastikan popup tidak diblokir atau coba lagi.');
+      setError(parseErrorMessage(err, 'Gagal login dengan Google. Pastikan popup tidak diblokir atau coba lagi.'));
     } finally {
       setGoogleLoading(false);
     }
@@ -122,7 +129,11 @@ export const LoginPage = () => {
             {error && (
               <div className="mb-6 flex items-center gap-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 p-4 text-sm font-semibold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="h-5 w-5 shrink-0" />
-                <span>{error}</span>
+                <span>
+                  {typeof error === 'string'
+                    ? error
+                    : error?.message || error?.error || String(error)}
+                </span>
               </div>
             )}
 
