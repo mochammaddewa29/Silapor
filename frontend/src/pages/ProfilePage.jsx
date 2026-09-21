@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
-import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign, Key, X } from 'lucide-react';
+import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign, Key, X, Eye, EyeOff } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, login } = useAuth(); // login function will update user context
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, type: '', message: '' });
+
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -301,13 +305,20 @@ const ProfilePage = () => {
                             <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
                           </div>
                           <input
-                            type="password"
+                            type={showCurrentPass ? 'text' : 'password'}
                             name="current_password"
                             value={formData.current_password}
                             onChange={handleChange}
-                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-12 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
                             placeholder="Masukkan password Anda saat ini"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPass(!showCurrentPass)}
+                            className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                          >
+                            {showCurrentPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
                         </div>
                       </div>
 
@@ -320,13 +331,20 @@ const ProfilePage = () => {
                             <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
                           </div>
                           <input
-                            type="password"
+                            type={showNewPass ? 'text' : 'password'}
                             name="new_password"
                             value={formData.new_password}
                             onChange={handleChange}
-                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-12 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
                             placeholder="Masukkan password baru (min. 6 karakter)"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPass(!showNewPass)}
+                            className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                          >
+                            {showNewPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
                         </div>
                       </div>
 
@@ -339,13 +357,20 @@ const ProfilePage = () => {
                             <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
                           </div>
                           <input
-                            type="password"
+                            type={showConfirmPass ? 'text' : 'password'}
                             name="confirm_password"
                             value={formData.confirm_password}
                             onChange={handleChange}
-                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-12 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
                             placeholder="Ulangi password baru Anda"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPass(!showConfirmPass)}
+                            className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                          >
+                            {showConfirmPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
                         </div>
                       </div>
                     </div>
