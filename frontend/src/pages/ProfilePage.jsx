@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
-import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign } from 'lucide-react';
+import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign, Key } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, login } = useAuth(); // login function will update user context
@@ -10,7 +10,9 @@ const ProfilePage = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
-    full_name: ''
+    full_name: '',
+    current_password: '',
+    new_password: ''
   });
 
   useEffect(() => {
@@ -37,14 +39,29 @@ const ProfilePage = () => {
       return;
     }
 
+    if (formData.new_password && formData.new_password.length < 6) {
+      setErrorMsg('Password baru minimal 6 karakter.');
+      return;
+    }
+
     try {
       setLoading(true);
       const dataToUpdate = {
         full_name: formData.full_name
       };
 
+      if (formData.new_password) {
+        dataToUpdate.current_password = formData.current_password;
+        dataToUpdate.new_password = formData.new_password;
+      }
+
       const res = await authAPI.updateProfile(dataToUpdate);
       setSuccessMsg(res.message || 'Profil berhasil diperbarui!');
+      setFormData(prev => ({
+        ...prev,
+        current_password: '',
+        new_password: ''
+      }));
       
       // Update local storage and context
       if (res.user) {
@@ -55,7 +72,6 @@ const ProfilePage = () => {
           window.location.reload();
         }, 1500);
       }
-
 
     } catch (err) {
       setErrorMsg(err.response?.data?.error || 'Gagal memperbarui profil.');
@@ -225,6 +241,57 @@ const ProfilePage = () => {
                       <Lock className="h-3.5 w-3.5" />
                       Username merupakan identitas unik dan tidak dapat diubah.
                     </p>
+                  </div>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700/50"></div>
+                
+                <div className="space-y-5">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+                      <Key className="h-4 w-4 text-blue-500" /> Ganti Password
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                      Kosongkan bagian ini jika Anda tidak ingin mengubah password.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                      Password Saat Ini
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                      </div>
+                      <input
+                        type="password"
+                        name="current_password"
+                        value={formData.current_password}
+                        onChange={handleChange}
+                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                        placeholder="Masukkan password Anda saat ini"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                      Password Baru
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                      </div>
+                      <input
+                        type="password"
+                        name="new_password"
+                        value={formData.new_password}
+                        onChange={handleChange}
+                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                        placeholder="Masukkan password baru (min. 6 karakter)"
+                      />
+                    </div>
                   </div>
                 </div>
 
