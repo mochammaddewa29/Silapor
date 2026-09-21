@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import CloudStatusBadge from './CloudStatusBadge';
+import { getImageUrl } from '../services/api';
 
 export const Navbar = ({ onOpenSidebar }) => {
   const { user, isAdmin } = useAuth();
@@ -73,8 +74,12 @@ export const Navbar = ({ onOpenSidebar }) => {
           title="Ke Profil Pengguna"
           className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/90 hover:bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 dark:border-gray-700 dark:bg-gray-800/90 dark:hover:bg-gray-700/90 transition-colors cursor-pointer"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shrink-0">
-            {user?.full_name?.charAt(0) || 'U'}
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shrink-0 overflow-hidden">
+            {user?.photo_url ? (
+              <img src={getImageUrl(user.photo_url)} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              user?.full_name?.charAt(0) || 'U'
+            )}
           </div>
           <div className="hidden lg:block text-left">
             <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight truncate max-w-[100px]">

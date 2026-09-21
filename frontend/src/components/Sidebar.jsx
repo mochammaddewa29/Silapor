@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getImageUrl } from '../services/api';
 
 export const Sidebar = ({ isOpen, onClose }) => {
   const { user, isAdmin, logout } = useAuth();
@@ -179,8 +180,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
         {/* User Profile Card */}
         <div className="rounded-xl bg-slate-800/40 p-3 border border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shrink-0 shadow-sm">
-              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shrink-0 shadow-sm overflow-hidden">
+              {user?.photo_url ? (
+                <img src={getImageUrl(user.photo_url)} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-white">

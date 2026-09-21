@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
+import { authAPI, getImageUrl } from '../services/api';
 import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign, Key, X, Eye, EyeOff } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, login } = useAuth(); // login function will update user context
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [toast, setToast] = useState({ show: false, type: '', message: '' });
 
   const [showCurrentPass, setShowCurrentPass] = useState(false);
@@ -40,6 +41,38 @@ const ProfilePage = () => {
 
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
+  };
+
+  const handleAvatarSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('error', 'Ukuran foto maksimal 5MB.');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const res = await authAPI.uploadAvatar(formData);
+      showToast('success', res.message || 'Foto profil berhasil diperbarui!');
+
+      if (res.user) {
+        sessionStorage.setItem('app_user', JSON.stringify(res.user));
+        localStorage.setItem('app_user', JSON.stringify(res.user));
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      }
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+      showToast('error', err.response?.data?.error || 'Gagal mengunggah foto profil.');
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -180,13 +213,32 @@ const ProfilePage = () => {
             <div className="group relative h-24 w-24 sm:h-32 sm:w-32 rounded-3xl bg-white dark:bg-[#1E293B] p-2 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10 transition-transform duration-500 hover:scale-105">
               <div className="h-full w-full rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl sm:text-4xl font-black shadow-inner relative overflow-hidden">
                 {/* Shine effect */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
-                {getInitials(user?.full_name)}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out z-10"></div>
+                
+                {uploadingAvatar ? (
+                  <span className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin"></span>
+                ) : user?.photo_url ? (
+                  <img src={getImageUrl(user.photo_url)} alt="Foto Profil" className="w-full h-full object-cover rounded-2xl" />
+                ) : (
+                  getInitials(user?.full_name)
+                )}
               </div>
               
-              <button className="absolute -bottom-1 -right-1 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors z-20 hover:scale-110 active:scale-95 duration-200">
+              <label 
+                htmlFor="avatar-upload-input" 
+                title="Ganti Foto Profil" 
+                className="absolute -bottom-1 -right-1 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors z-20 hover:scale-110 active:scale-95 duration-200 cursor-pointer"
+              >
                 <Camera className="h-4 w-4" />
-              </button>
+                <input 
+                  id="avatar-upload-input" 
+                  type="file" 
+                  accept="image/png, image/jpeg, image/jpg, image/webp" 
+                  className="hidden" 
+                  onChange={handleAvatarSelect} 
+                  disabled={uploadingAvatar}
+                />
+              </label>
             </div>
 
             <div className="pb-1 mt-3 sm:mt-0">

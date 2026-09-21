@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc } = require('../config/firebase');
 const { getLocalDateTime } = require('../utils/time');
+const { uploadToCloudinary } = require('../services/cloudinaryService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -230,5 +231,42 @@ exports.updateProfile = async (req, res) => {
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server saat memperbarui profil.' });
+  }
+};
+
+// Upload user profile photo / avatar
+exports.uploadAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (!req.file) {
+      return res.status(400).json({ error: 'File foto profil tidak ditemukan.' });
+    }
+
+    let photoUrl = null;
+    try {
+      photoUrl = await uploadToCloudinary(req.file.path, 'user_avatars');
+    } catch (e) {
+      console.warn('Cloudinary avatar upload notice:', e);
+    }
+
+    if (!photoUrl) {
+      photoUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const userRef = doc(db, 'users', String(userId));
+    await updateDoc(userRef, { photo_url: photoUrl });
+
+    const updatedSnap = await getDoc(userRef);
+    const updatedUser = updatedSnap.data();
+    const { password: _, ...userWithoutPassword } = updatedUser;
+
+    res.json({
+      message: 'Foto profil berhasil diperbarui.',
+      photo_url: photoUrl,
+      user: userWithoutPassword
+    });
+  } catch (err) {
+    console.error('Upload avatar error:', err);
+    res.status(500).json({ error: 'Gagal mengunggah foto profil.' });
   }
 };
