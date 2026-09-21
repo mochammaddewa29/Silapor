@@ -284,7 +284,7 @@ export const AdminReportsPage = () => {
       {error && (
         <div className="flex items-center gap-2 rounded-2xl bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-semibold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}</span>
+          <span>{typeof error === 'string' ? error : error?.message || String(error)}</span>
         </div>
       )}
 

@@ -109,7 +109,8 @@ export const ReportFormPage = () => {
       setSuccess(true);
     } catch (err) {
       console.error('Submit error:', err);
-      setError(err.response?.data?.error || 'Gagal mengirim laporan pengaduan.');
+      const errMsg = err.response?.data?.error;
+      setError(typeof errMsg === 'string' ? errMsg : errMsg?.message || 'Gagal mengirim laporan pengaduan.');
     } finally {
       setLoading(false);
     }
@@ -137,7 +138,7 @@ export const ReportFormPage = () => {
       {error && (
         <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-4 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}</span>
+          <span>{typeof error === 'string' ? error : error?.message || String(error)}</span>
         </div>
       )}
 
