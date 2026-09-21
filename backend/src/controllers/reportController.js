@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, deleteDoc, orderBy } = require('../config/firebase');
-const { uploadToBlob } = require('../services/blobService');
+const { uploadToBlob, deleteFromBlob } = require('../services/blobService');
 const ExcelJS = require('exceljs');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
@@ -871,3 +871,38 @@ exports.exportExcel = async (req, res) => {
     res.status(500).json({ error: 'Terjadi kesalahan saat export Excel.' });
   }
 };
+
+// Delete report (admin only) - also deletes photo from Vercel Blob
+exports.deleteReport = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+
+    if (!reportSnap.exists()) {
+      return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
+    }
+
+    const report = reportSnap.data();
+
+    // Hapus foto dari Vercel Blob jika ada
+    if (report.photo_url) {
+      const deleted = await deleteFromBlob(report.photo_url);
+      if (deleted) {
+        console.log('[Delete Report] Foto berhasil dihapus dari Vercel Blob:', report.photo_url);
+      } else {
+        console.warn('[Delete Report] Foto tidak dihapus (mungkin bukan Vercel Blob URL):', report.photo_url);
+      }
+    }
+
+    // Hapus dokumen laporan dari Firestore
+    await deleteDoc(reportRef);
+
+    res.json({ message: 'Laporan berhasil dihapus.' });
+  } catch (err) {
+    console.error('Delete report error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan saat menghapus laporan.' });
+  }
+};
+
