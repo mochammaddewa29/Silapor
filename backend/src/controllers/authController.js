@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc } = require('../config/firebase');
 const { getLocalDateTime } = require('../utils/time');
-const { uploadToCloudinary } = require('../services/cloudinaryService');
+const { uploadToBlob } = require('../services/blobService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -244,9 +244,9 @@ exports.uploadAvatar = async (req, res) => {
 
     let photoUrl = null;
     try {
-      photoUrl = await uploadToCloudinary(req.file.path, 'user_avatars');
+      photoUrl = await uploadToBlob(req.file.path, 'user_avatars');
     } catch (e) {
-      console.warn('Cloudinary avatar upload notice:', e);
+      console.warn('Vercel Blob avatar upload notice:', e);
     }
 
     if (!photoUrl) {

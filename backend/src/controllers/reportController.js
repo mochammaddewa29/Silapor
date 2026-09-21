@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, deleteDoc, orderBy } = require('../config/firebase');
-const { uploadToCloudinary } = require('../services/cloudinaryService');
+const { uploadToBlob } = require('../services/blobService');
 const ExcelJS = require('exceljs');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
@@ -82,8 +82,8 @@ exports.directReport = async (req, res) => {
 
     let photo_url = null;
     if (req.file) {
-      const cloudinaryUrl = await uploadToCloudinary(req.file.path);
-      photo_url = cloudinaryUrl || `/uploads/${req.file.filename}`;
+      const blobUrl = await uploadToBlob(req.file.path, 'maintenance_reports');
+      photo_url = blobUrl || `/uploads/${req.file.filename}`;
     }
 
     const ticketNumber = generateTicketNumber();
@@ -263,8 +263,8 @@ exports.createReport = async (req, res) => {
 
     let photo_url = null;
     if (req.file) {
-      const cloudinaryUrl = await uploadToCloudinary(req.file.path);
-      photo_url = cloudinaryUrl || `/uploads/${req.file.filename}`;
+      const blobUrl = await uploadToBlob(req.file.path, 'maintenance_reports');
+      photo_url = blobUrl || `/uploads/${req.file.filename}`;
     }
 
     const now = getLocalDateTime();
