@@ -233,7 +233,7 @@ const ProfilePage = () => {
                 <input 
                   id="avatar-upload-input" 
                   type="file" 
-                  accept="image/png, image/jpeg, image/jpg, image/webp" 
+                  accept="image/*" 
                   className="hidden" 
                   onChange={handleAvatarSelect} 
                   disabled={uploadingAvatar}
