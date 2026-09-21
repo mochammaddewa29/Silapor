@@ -64,9 +64,11 @@ async function resetAllData() {
     }
 
     // Buat ulang dokumen admin di Firestore
+    const adminPassword = bcrypt.hashSync('admin123', 10);
     await setDoc(doc(db, 'users', '1'), {
       id: 1,
       username: 'admin',
+      password: adminPassword,
       full_name: 'Administrator Sistem',
       role: 'admin',
       created_at: new Date().toISOString()

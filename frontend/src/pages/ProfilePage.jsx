@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
-import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign, Key } from 'lucide-react';
+import { User, Lock, Save, Camera, CheckCircle2, AlertCircle, Shield, AtSign, Key, X } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, login } = useAuth(); // login function will update user context
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [toast, setToast] = useState({ show: false, type: '', message: '' });
 
   const [formData, setFormData] = useState({
     full_name: '',
     current_password: '',
-    new_password: ''
+    new_password: '',
+    confirm_password: ''
   });
 
   useEffect(() => {
@@ -24,6 +24,20 @@ const ProfilePage = () => {
     }
   }, [user]);
 
+  // Auto hide toast after 5 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast(prev => ({ ...prev, show: false }));
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
+  const showToast = (type, message) => {
+    setToast({ show: true, type, message });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -31,17 +45,26 @@ const ProfilePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccessMsg('');
-    setErrorMsg('');
+    setToast({ show: false, type: '', message: '' });
 
     if (!formData.full_name.trim()) {
-      setErrorMsg('Nama lengkap tidak boleh kosong.');
+      showToast('error', 'Nama lengkap tidak boleh kosong.');
       return;
     }
 
-    if (formData.new_password && formData.new_password.length < 6) {
-      setErrorMsg('Password baru minimal 6 karakter.');
-      return;
+    if (formData.new_password) {
+      if (!formData.current_password) {
+        showToast('error', 'Masukkan password saat ini untuk mengonfirmasi perubahan.');
+        return;
+      }
+      if (formData.new_password.length < 6) {
+        showToast('error', 'Password baru minimal 6 karakter.');
+        return;
+      }
+      if (formData.new_password !== formData.confirm_password) {
+        showToast('error', 'Konfirmasi password baru tidak cocok.');
+        return;
+      }
     }
 
     try {
@@ -56,25 +79,26 @@ const ProfilePage = () => {
       }
 
       const res = await authAPI.updateProfile(dataToUpdate);
-      setSuccessMsg(res.message || 'Profil berhasil diperbarui!');
+      showToast('success', res.message || 'Profil berhasil diperbarui!');
       setFormData(prev => ({
         ...prev,
         current_password: '',
-        new_password: ''
+        new_password: '',
+        confirm_password: ''
       }));
       
       // Update local storage and context
       if (res.user) {
         sessionStorage.setItem('app_user', JSON.stringify(res.user));
         localStorage.setItem('app_user', JSON.stringify(res.user));
-        // Soft refresh to apply context changes
+        // Refresh context after toast display
         setTimeout(() => {
           window.location.reload();
         }, 1500);
       }
 
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Gagal memperbarui profil.');
+      showToast('error', err.response?.data?.error || 'Gagal memperbarui profil.');
     } finally {
       setLoading(false);
     }
@@ -89,7 +113,38 @@ const ProfilePage = () => {
   const isGoogleUser = user?.username?.includes('@');
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 relative">
+      {/* Toast Notification Container */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-[100] max-w-md w-full animate-bounce-short transition-all duration-300">
+          <div className={`p-4 rounded-2xl shadow-2xl backdrop-blur-md border flex items-start gap-3.5 ${
+            toast.type === 'success' 
+              ? 'bg-emerald-900/90 border-emerald-500/40 text-emerald-50 shadow-emerald-900/30' 
+              : 'bg-rose-900/90 border-rose-500/40 text-rose-50 shadow-rose-900/30'
+          }`}>
+            <div className={`p-2 rounded-xl shrink-0 ${
+              toast.type === 'success' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+            }`}>
+              {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+            </div>
+            <div className="flex-1 pt-0.5">
+              <h4 className="text-sm font-bold tracking-tight">
+                {toast.type === 'success' ? 'Berhasil!' : 'Gagal'}
+              </h4>
+              <p className="text-xs font-medium opacity-90 leading-relaxed mt-0.5">
+                {toast.message}
+              </p>
+            </div>
+            <button 
+              onClick={() => setToast(prev => ({ ...prev, show: false }))}
+              className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -166,29 +221,6 @@ const ProfilePage = () => {
 
         {/* Content Section */}
         <div className="p-6 sm:p-10 bg-slate-50/50 dark:bg-transparent">
-          {successMsg && (
-            <div className="mb-8 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 p-4 border border-emerald-200/60 dark:border-emerald-500/20 flex items-start gap-3">
-              <div className="rounded-full bg-emerald-100 dark:bg-emerald-500/20 p-1 shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-300">Berhasil</h4>
-                <p className="text-sm font-medium text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">{successMsg}</p>
-              </div>
-            </div>
-          )}
-          {errorMsg && (
-            <div className="mb-8 rounded-2xl bg-rose-50 dark:bg-rose-500/10 p-4 border border-rose-200/60 dark:border-rose-500/20 flex items-start gap-3">
-              <div className="rounded-full bg-rose-100 dark:bg-rose-500/20 p-1 shrink-0">
-                <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-rose-800 dark:text-rose-300">Gagal</h4>
-                <p className="text-sm font-medium text-rose-700/80 dark:text-rose-400/80 mt-0.5">{errorMsg}</p>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-1">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -252,10 +284,10 @@ const ProfilePage = () => {
                     
                     <div className="space-y-5">
                       <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
                           <Key className="h-4 w-4 text-blue-500" /> Ganti Password
                         </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Kosongkan bagian ini jika Anda tidak ingin mengubah password.
                         </p>
                       </div>
@@ -294,6 +326,25 @@ const ProfilePage = () => {
                             onChange={handleChange}
                             className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
                             placeholder="Masukkan password baru (min. 6 karakter)"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                          Konfirmasi Password Baru
+                        </label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                          </div>
+                          <input
+                            type="password"
+                            name="confirm_password"
+                            value={formData.confirm_password}
+                            onChange={handleChange}
+                            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 hover:border-slate-300 dark:hover:border-slate-600"
+                            placeholder="Ulangi password baru Anda"
                           />
                         </div>
                       </div>
