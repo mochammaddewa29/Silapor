@@ -1,12 +1,141 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc } = require('../config/firebase');
+const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, deleteDoc } = require('../config/firebase');
 const { getLocalDateTime } = require('../utils/time');
 const { uploadToBlob } = require('../services/blobService');
+const { sendOTPEmail } = require('../services/emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+// Send OTP for registration
+exports.sendOTP = async (req, res) => {
+  try {
+    const { email, full_name, password } = req.body;
+
+    if (!email || !full_name || !password) {
+      return res.status(400).json({ error: 'Email, nama lengkap, dan password wajib diisi.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Format email tidak valid.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password minimal 6 karakter.' });
+    }
+    if (full_name.trim().length < 2) {
+      return res.status(400).json({ error: 'Nama lengkap minimal 2 karakter.' });
+    }
+
+    // Cek apakah email sudah terdaftar
+    const usersRef = collection(db, 'users');
+    const qEmail = query(usersRef, where('username', '==', email));
+    const snapEmail = await getDocs(qEmail);
+    if (!snapEmail.empty) {
+      return res.status(409).json({ error: 'Email sudah terdaftar. Silakan login.' });
+    }
+
+    // Generate OTP 6 digit
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+
+    // Simpan OTP ke Firestore (koleksi otps)
+    const otpId = `otp_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    await setDoc(doc(db, 'otps', otpId), {
+      email,
+      full_name: full_name.trim(),
+      password, // plain, akan di-hash setelah OTP diverifikasi
+      otp,
+      expires_at: expiresAt.toISOString(),
+      created_at: getLocalDateTime(),
+    });
+
+    // Kirim OTP ke email
+    await sendOTPEmail(email, otp, full_name.trim());
+
+    res.json({ message: 'OTP berhasil dikirim ke email Anda. Berlaku 5 menit.' });
+  } catch (err) {
+    console.error('Send OTP error:', err);
+    if (err.code === 'EAUTH' || err.responseCode === 535) {
+      return res.status(500).json({ error: 'Konfigurasi email server bermasalah. Hubungi administrator.' });
+    }
+    res.status(500).json({ error: 'Gagal mengirim OTP. Coba lagi.' });
+  }
+};
+
+// Verify OTP and create account
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email dan OTP wajib diisi.' });
+    }
+
+    const otpId = `otp_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const otpRef = doc(db, 'otps', otpId);
+    const otpSnap = await getDoc(otpRef);
+
+    if (!otpSnap.exists()) {
+      return res.status(404).json({ error: 'Kode OTP tidak ditemukan. Silakan minta OTP baru.' });
+    }
+
+    const otpData = otpSnap.data();
+
+    // Cek expired
+    if (new Date() > new Date(otpData.expires_at)) {
+      await deleteDoc(otpRef);
+      return res.status(410).json({ error: 'Kode OTP sudah kedaluwarsa. Silakan minta OTP baru.' });
+    }
+
+    // Cek OTP cocok
+    if (otpData.otp !== otp.trim()) {
+      return res.status(401).json({ error: 'Kode OTP salah. Periksa kembali email Anda.' });
+    }
+
+    // Cek sekali lagi apakah email sudah terdaftar (race condition)
+    const usersRef = collection(db, 'users');
+    const qEmail = query(usersRef, where('username', '==', email));
+    const snapEmail = await getDocs(qEmail);
+    if (!snapEmail.empty) {
+      await deleteDoc(otpRef);
+      return res.status(409).json({ error: 'Email sudah terdaftar. Silakan login.' });
+    }
+
+    // Buat akun user
+    const hashedPassword = bcrypt.hashSync(otpData.password, 10);
+    const now = getLocalDateTime();
+    const userId = uuidv4();
+
+    const newUser = {
+      id: userId,
+      username: email,
+      password: hashedPassword,
+      full_name: otpData.full_name,
+      role: 'user',
+      photo_url: null,
+      created_at: now,
+    };
+
+    await setDoc(doc(db, 'users', String(userId)), newUser);
+
+    // Hapus OTP setelah berhasil
+    await deleteDoc(otpRef);
+
+    // Generate token dan auto-login
+    const token = jwt.sign(
+      { id: newUser.id, username: newUser.username, role: newUser.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const { password: _, ...userWithoutPassword } = newUser;
+    res.status(201).json({ token, user: userWithoutPassword });
+  } catch (err) {
+    console.error('Verify OTP error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+};
 
 // Register new user
 exports.register = async (req, res) => {

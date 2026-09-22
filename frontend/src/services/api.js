@@ -51,6 +51,14 @@ export const authAPI = {
     const response = await api.post('/auth/register', data);
     return response.data;
   },
+  sendOTP: async (email, fullName, password) => {
+    const response = await api.post('/auth/send-otp', { email, full_name: fullName, password });
+    return response.data;
+  },
+  verifyOTP: async (email, otp) => {
+    const response = await api.post('/auth/verify-otp', { email, otp });
+    return response.data;
+  },
   getMe: async () => {
     const response = await api.get('/auth/me');
     return response.data;
@@ -68,6 +76,7 @@ export const authAPI = {
     return response.data;
   },
 };
+
 
 export const reportsAPI = {
   getAll: async (params = {}) => {

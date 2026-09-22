@@ -5,6 +5,8 @@ const { authenticate } = require('../middleware/auth');
 const uploadModule = require('../middleware/upload');
 const upload = (uploadModule && uploadModule.default) ? uploadModule.default : uploadModule;
 
+router.post('/send-otp', authController.sendOTP);
+router.post('/verify-otp', authController.verifyOTP);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/google', authController.googleLogin);
