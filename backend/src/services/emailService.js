@@ -46,8 +46,8 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               <!-- Logo Icon -->
               <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:16px;">
                 <tr>
-                  <td style="width:52px;height:52px;background:#FFC107;border-radius:14px;text-align:center;vertical-align:middle;box-shadow:0 4px 16px rgba(255,193,7,0.3);">
-                    <span style="font-size:26px;line-height:52px;">&#9889;</span>
+                  <td style="width:64px;height:64px;background:#FFC107;border-radius:16px;text-align:center;vertical-align:middle;box-shadow:0 4px 20px rgba(255,193,7,0.4);">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="#0B1E3F" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:auto;margin-top:16px;"><path d="M13 2L4.09 12.64A1 1 0 0 0 4.91 14.5H11v7.5l8.91-10.64A1 1 0 0 0 19.09 9.5H13V2z"/></svg>
                   </td>
                 </tr>
               </table>
@@ -244,11 +244,11 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
           
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0B1E3F 0%,#92400E 50%,#F59E0B 100%);padding:36px 32px 32px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#0B1E3F 0%,#1565C0 60%,#1E88E5 100%);padding:36px 32px 32px;text-align:center;">
               <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:16px;">
                 <tr>
-                  <td style="width:52px;height:52px;background:#FFC107;border-radius:14px;text-align:center;vertical-align:middle;box-shadow:0 4px 16px rgba(255,193,7,0.3);">
-                    <span style="font-size:26px;line-height:52px;">&#9889;</span>
+                  <td style="width:64px;height:64px;background:#FFC107;border-radius:16px;text-align:center;vertical-align:middle;box-shadow:0 4px 20px rgba(255,193,7,0.4);">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="#0B1E3F" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:auto;margin-top:16px;"><path d="M13 2L4.09 12.64A1 1 0 0 0 4.91 14.5H11v7.5l8.91-10.64A1 1 0 0 0 19.09 9.5H13V2z"/></svg>
                   </td>
                 </tr>
               </table>
@@ -260,13 +260,13 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
                   </td>
                 </tr>
               </table>
-              <p style="margin:10px 0 0;color:#FDE68A;font-size:12px;font-weight:500;letter-spacing:0.5px;">RESET PASSWORD AKUN</p>
+              <p style="margin:10px 0 0;color:#93C5FD;font-size:12px;font-weight:500;letter-spacing:0.5px;">RESET PASSWORD AKUN</p>
             </td>
           </tr>
 
           <!-- Accent Line -->
           <tr>
-            <td style="height:3px;background:linear-gradient(90deg,#F59E0B,#EF4444,#F59E0B);"></td>
+            <td style="height:3px;background:linear-gradient(90deg,#FFC107,#1E88E5,#FFC107);"></td>
           </tr>
 
           <!-- Body -->
