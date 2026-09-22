@@ -1,30 +1,30 @@
-const nodemailer = require('nodemailer');
-
-// Buat transporter Gmail SMTP
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-};
+const Brevo = require('@getbrevo/brevo');
 
 /**
- * Kirim OTP ke email user
+ * Kirim OTP ke email user menggunakan Brevo (SendinBlue)
  * @param {string} toEmail - Alamat email tujuan
  * @param {string} otp - Kode OTP 6 digit
  * @param {string} fullName - Nama lengkap user
  */
 exports.sendOTPEmail = async (toEmail, otp, fullName) => {
-  const transporter = createTransporter();
+  const apiInstance = new Brevo.TransactionalEmailsApi();
 
-  const mailOptions = {
-    from: `"Lapor JakBan" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
-    subject: `Kode Verifikasi OTP Anda - Lapor JakBan`,
-    html: `
+  // Set API Key dari environment variable
+  const apiKey = apiInstance.authentications['apiKey'];
+  apiKey.apiKey = process.env.BREVO_API_KEY;
+
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+
+  sendSmtpEmail.sender = {
+    name: 'Lapor JakBan',
+    email: process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'no-reply@laporjakban.com',
+  };
+
+  sendSmtpEmail.to = [{ email: toEmail, name: fullName }];
+
+  sendSmtpEmail.subject = 'Kode Verifikasi OTP Anda - Lapor JakBan';
+
+  sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -44,7 +44,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               <div style="display:inline-flex;align-items:center;justify-content:center;background:#FFC107;border-radius:14px;width:56px;height:56px;margin-bottom:16px;">
                 <span style="font-size:28px;">⚡</span>
               </div>
-              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:900;letter-spacing:1px;">
+              <h1 style="margin:8px 0 0;color:#ffffff;font-size:26px;font-weight:900;letter-spacing:1px;">
                 Lapor<span style="background:#FFC107;color:#0B1E3F;border-radius:6px;padding:2px 8px;margin-left:6px;font-size:14px;font-weight:900;">JakBan</span>
               </h1>
               <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Sistem Pelaporan Terpadu & Terintegrasi</p>
@@ -76,7 +76,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               </div>
 
               <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.6;">
-                Jika Anda tidak merasa mendaftar di Lapor JakBan, abaikan email ini. Tidak ada tindakan lebih lanjut yang diperlukan.
+                Jika Anda tidak merasa mendaftar di Lapor JakBan, abaikan email ini.
               </p>
             </td>
           </tr>
@@ -94,8 +94,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
   </table>
 </body>
 </html>
-    `,
-  };
+  `;
 
-  await transporter.sendMail(mailOptions);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
 };

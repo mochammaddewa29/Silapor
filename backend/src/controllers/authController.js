@@ -56,7 +56,8 @@ exports.sendOTP = async (req, res) => {
     res.json({ message: 'OTP berhasil dikirim ke email Anda. Berlaku 5 menit.' });
   } catch (err) {
     console.error('Send OTP error:', err);
-    if (err.code === 'EAUTH' || err.responseCode === 535) {
+    // Brevo API error (invalid API key, sender not verified, dll)
+    if (err.response?.status === 401 || err.response?.status === 403) {
       return res.status(500).json({ error: 'Konfigurasi email server bermasalah. Hubungi administrator.' });
     }
     res.status(500).json({ error: 'Gagal mengirim OTP. Coba lagi.' });
