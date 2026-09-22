@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Kirim OTP ke email user menggunakan Brevo REST API
  * @param {string} toEmail - Alamat email tujuan
  * @param {string} otp - Kode OTP 6 digit
@@ -403,3 +403,5 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
     throw error;
   }
 };
+
+
