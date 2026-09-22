@@ -354,27 +354,32 @@ exports.getReports = async (req, res) => {
     // Sort descending by created_at
     reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // Get unique user IDs to fetch their details
-    const userIds = [...new Set(reports.map(r => r.user_id))];
+    const total = reports.length;
+    // Paginate in memory first to avoid fetching unnecessary users
+    let paginatedReports = reports.slice(offset, offset + parseInt(limit));
+
+    // Get unique user IDs only for the paginated reports
+    const userIds = [...new Set(paginatedReports.map(r => String(r.user_id)))];
     const usersMap = {};
+    
     if (userIds.length > 0) {
-      // Fetch users in chunks if necessary, but assuming < 30 per page
-      const usersSnap = await getDocs(collection(db, 'users'));
-      usersSnap.forEach(d => {
-        const u = d.data();
-        usersMap[u.id] = u;
+      // Fetch only the users needed for the current page in parallel
+      const userPromises = userIds.map(uid => getDoc(doc(db, 'users', uid)));
+      const userSnaps = await Promise.all(userPromises);
+      
+      userSnaps.forEach(snap => {
+        if (snap.exists()) {
+          const u = snap.data();
+          usersMap[u.id] = u;
+        }
       });
     }
 
-    reports = reports.map(r => ({
+    paginatedReports = paginatedReports.map(r => ({
       ...r,
       username: usersMap[r.user_id]?.username,
       user_full_name: usersMap[r.user_id]?.full_name
     }));
-
-    const total = reports.length;
-    // Paginate in memory
-    const paginatedReports = reports.slice(offset, offset + parseInt(limit));
 
     res.json({
       reports: paginatedReports,
