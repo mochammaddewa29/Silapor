@@ -12,10 +12,10 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 // Send OTP for registration
 exports.sendOTP = async (req, res) => {
   try {
-    const { email, full_name, password } = req.body;
+    const { email, full_name, password, divisi } = req.body;
 
-    if (!email || !full_name || !password) {
-      return res.status(400).json({ error: 'Email, nama lengkap, dan password wajib diisi.' });
+    if (!email || !full_name || !password || !divisi) {
+      return res.status(400).json({ error: 'Email, nama lengkap, password, dan divisi wajib diisi.' });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Format email tidak valid.' });
@@ -45,6 +45,7 @@ exports.sendOTP = async (req, res) => {
       email,
       full_name: full_name.trim(),
       password, // plain, akan di-hash setelah OTP diverifikasi
+      divisi: divisi.trim(),
       otp,
       expires_at: expiresAt.toISOString(),
       created_at: getLocalDateTime(),
@@ -113,6 +114,7 @@ exports.verifyOTP = async (req, res) => {
       username: email,
       password: hashedPassword,
       full_name: otpData.full_name,
+      divisi: otpData.divisi,
       role: 'user',
       photo_url: null,
       created_at: now,
