@@ -1,3 +1,6 @@
+// URL Logo resmi Lapor JakBan (CDN Vercel Blob)
+const LOGO_ICON_URL = 'https://x0dpjdlo7g36tofw.public.blob.vercel-storage.com/assets/logo-icon.png';
+
 /**
  * Kirim OTP ke email user menggunakan Brevo REST API
  * @param {string} toEmail - Alamat email tujuan
@@ -66,21 +69,25 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               <!-- Logo Icon -->
               <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:16px;">
                 <tr>
-                  <td style="width:64px;height:64px;background:#FFC107;border-radius:16px;text-align:center;vertical-align:middle;box-shadow:0 4px 20px rgba(255,193,7,0.4);font-size:30px;line-height:64px;font-style:normal;">
-                    &#9889;
+                  <td align="center" style="width:64px;height:64px;">
+                    <img src="${LOGO_ICON_URL}" width="64" height="64" alt="Lapor JakBan Logo" style="display:block;width:64px;height:64px;border:0;outline:none;text-decoration:none;border-radius:18px;box-shadow:0 6px 20px rgba(255,193,7,0.4);" />
                   </td>
                 </tr>
               </table>
               <!-- Brand Name -->
               <table cellpadding="0" cellspacing="0" border="0" align="center">
                 <tr>
-                  <td style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:1.5px;padding-right:6px;">Lapor</td>
+                  <td style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:1px;padding-right:8px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;">Lapor</td>
                   <td>
-                    <span style="display:inline-block;background:#FFC107;color:#0B1E3F;border-radius:6px;padding:3px 10px;font-size:13px;font-weight:900;letter-spacing:0.5px;">JakBan</span>
+                    <table cellpadding="0" cellspacing="0" border="0" style="background:#FFC107;border-radius:6px;">
+                      <tr>
+                        <td style="padding:3px 9px;color:#0B1E3F;font-size:13px;font-weight:900;letter-spacing:0.5px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;text-transform:uppercase;">JAKBAN</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
-              <p style="margin:10px 0 0;color:#93C5FD;font-size:12px;font-weight:500;letter-spacing:0.5px;">SISTEM PELAPORAN TERPADU &amp; TERINTEGRASI</p>
+              <p style="margin:10px 0 0;color:#BAE6FD;font-size:12px;font-weight:600;letter-spacing:0.5px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;">SISTEM PELAPORAN TERPADU &amp; TERINTEGRASI</p>
             </td>
           </tr>
 
@@ -285,22 +292,28 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#0B1E3F 0%,#1565C0 60%,#1E88E5 100%);padding:36px 32px 32px;text-align:center;">
+              <!-- Logo Icon -->
               <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:16px;">
                 <tr>
-                  <td style="width:64px;height:64px;background:#FFC107;border-radius:16px;text-align:center;vertical-align:middle;box-shadow:0 4px 20px rgba(255,193,7,0.4);font-size:30px;line-height:64px;font-style:normal;">
-                    &#9889;
+                  <td align="center" style="width:64px;height:64px;">
+                    <img src="${LOGO_ICON_URL}" width="64" height="64" alt="Lapor JakBan Logo" style="display:block;width:64px;height:64px;border:0;outline:none;text-decoration:none;border-radius:18px;box-shadow:0 6px 20px rgba(255,193,7,0.4);" />
                   </td>
                 </tr>
               </table>
+              <!-- Brand Name -->
               <table cellpadding="0" cellspacing="0" border="0" align="center">
                 <tr>
-                  <td style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:1.5px;padding-right:6px;">Lapor</td>
+                  <td style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:1px;padding-right:8px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;">Lapor</td>
                   <td>
-                    <span style="display:inline-block;background:#FFC107;color:#0B1E3F;border-radius:6px;padding:3px 10px;font-size:13px;font-weight:900;letter-spacing:0.5px;">JakBan</span>
+                    <table cellpadding="0" cellspacing="0" border="0" style="background:#FFC107;border-radius:6px;">
+                      <tr>
+                        <td style="padding:3px 9px;color:#0B1E3F;font-size:13px;font-weight:900;letter-spacing:0.5px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;text-transform:uppercase;">JAKBAN</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
-              <p style="margin:10px 0 0;color:#93C5FD;font-size:12px;font-weight:500;letter-spacing:0.5px;">RESET PASSWORD AKUN</p>
+              <p style="margin:10px 0 0;color:#BAE6FD;font-size:12px;font-weight:600;letter-spacing:0.5px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;">RESET PASSWORD AKUN</p>
             </td>
           </tr>
 
