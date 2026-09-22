@@ -1,30 +1,14 @@
-const Brevo = require('@getbrevo/brevo');
-
 /**
- * Kirim OTP ke email user menggunakan Brevo (SendinBlue)
+ * Kirim OTP ke email user menggunakan Brevo REST API
  * @param {string} toEmail - Alamat email tujuan
  * @param {string} otp - Kode OTP 6 digit
  * @param {string} fullName - Nama lengkap user
  */
 exports.sendOTPEmail = async (toEmail, otp, fullName) => {
-  const apiInstance = new Brevo.TransactionalEmailsApi();
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'no-reply@laporjakban.com';
 
-  // Set API Key dari environment variable
-  const apiKey = apiInstance.authentications['apiKey'];
-  apiKey.apiKey = process.env.BREVO_API_KEY;
-
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
-  sendSmtpEmail.sender = {
-    name: 'Lapor JakBan',
-    email: process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'no-reply@laporjakban.com',
-  };
-
-  sendSmtpEmail.to = [{ email: toEmail, name: fullName }];
-
-  sendSmtpEmail.subject = 'Kode Verifikasi OTP Anda - Lapor JakBan';
-
-  sendSmtpEmail.htmlContent = `
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -96,5 +80,26 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
 </html>
   `;
 
-  await apiInstance.sendTransacEmail(sendSmtpEmail);
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      sender: { name: 'Lapor JakBan', email: senderEmail },
+      to: [{ email: toEmail, name: fullName }],
+      subject: 'Kode Verifikasi OTP Anda - Lapor JakBan',
+      htmlContent: htmlContent
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('Brevo API Error:', errorData);
+    const error = new Error('Failed to send email');
+    error.response = { status: response.status };
+    throw error;
+  }
 };
