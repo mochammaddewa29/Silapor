@@ -1,161 +1,213 @@
-# 🗺️ Flowchart Sistem Lapor JakBan
+# 🗺️ Master Flowchart Lengkap Sistem Lapor JakBan
 
-Dokumen ini memetakan seluruh alur kerja (*business workflow*) dan proses teknis pada aplikasi **Lapor JakBan**, mulai dari registrasi akun, pembuatan tiket aduan, proses penanganan oleh admin/teknisi, hingga integrasi cloud realtime.
+Dokumen ini adalah **panduan flowchart paling komprehensif** yang memetakan seluruh perjalanan sistem sejak **pertama kali URL web dibuka di browser**, proses pemilihan login/daftar/lupa password, verifikasi keamanan OTP, hingga percabangan akses sesuai hak akses (**Admin** vs **Pelapor/User**).
 
 ---
 
-## 1. Alur Utama Sistem (Overview End-to-End)
-
-Diagram berikut menggambarkan interaksi antara **Pelapor**, **Sistem Backend / Cloud**, dan **Admin**:
+## 1. Master Flowchart: Dari Pertama Kali Buka Web (End-to-End)
 
 ```mermaid
 graph TD
-    classDef userClass fill:#EFF6FF,stroke:#1D4ED8,stroke-width:2px;
-    classDef adminClass fill:#FEF3C7,stroke:#D97706,stroke-width:2px;
-    classDef sysClass fill:#F1F5F9,stroke:#475569,stroke-width:2px;
+    %% Styling Classes
+    classDef startEnd fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#FFFFFF;
+    classDef decision fill:#1E293B,stroke:#F59E0B,stroke-width:2px,color:#FFFFFF;
+    classDef publicFlow fill:#EFF6FF,stroke:#2563EB,stroke-width:2px,color:#0F172A;
+    classDef userFlow fill:#ECFDF5,stroke:#059669,stroke-width:2px,color:#064E3B;
+    classDef adminFlow fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F;
+    classDef systemCloud fill:#F8FAFC,stroke:#64748B,stroke-width:2px,stroke-dasharray: 5 5,color:#0F172A;
 
-    Start([Mulai]) --> RoleCheck{Sudah Punya Akun?}
+    Start([Pengguna Buka URL Web Lapor JakBan]):::startEnd --> CheckSession{Ada Sesi Login Aktif?<br/>Cek Token JWT di Browser}:::decision
+
+    %% --- CABANG BELUM LOGIN ---
+    CheckSession -- Tidak Ada Token --> LoginPage[Masuk ke Halaman Login / Auth]:::publicFlow
+
+    LoginPage --> AuthChoice{Pilih Menu / Tindakan di Halaman Login?}:::decision
+
+    %% OPSI 1: LOGIN BIASA
+    AuthChoice -- 1. Masuk / Login Biasa --> InputCreds[Masukkan Username/Email & Password]:::publicFlow
+    InputCreds --> VerifyCreds{Kredensial Cocok di Database?}:::decision
+    VerifyCreds -- Salah --> LoginError[Muncul Peringatan: Email / Password Salah]:::publicFlow
+    LoginError --> InputCreds
+    VerifyCreds -- Benar --> IssueJWT[Terbitkan Token JWT & Simpan ke Session]:::systemCloud
+
+    %% OPSI 2: LOGIN GOOGLE
+    AuthChoice -- 2. Masuk via Google --> GoogleAuth[Klik Tombol 'Masuk dengan Google']:::publicFlow
+    GoogleAuth --> GooglePopup[Popup Google Auth Firebase]:::systemCloud
+    GooglePopup --> GoogleVerify{Otentikasi Google Berhasil?}:::decision
+    GoogleVerify -- Batal / Gagal --> LoginPage
+    GoogleVerify -- Berhasil --> SyncGoogleUser[Sinkronisasi / Daftarkan Akun Otomatis]:::systemCloud
+    SyncGoogleUser --> IssueJWT
+
+    %% OPSI 3: DAFTAR AKUN BARU (REGISTER)
+    AuthChoice -- 3. Daftar Akun Baru --> RegForm[Isi Form: Nama Lengkap, Email, Divisi, Password]:::publicFlow
+    RegForm --> CheckExist{Email Sudah Terdaftar?}:::decision
+    CheckExist -- Ya --> RegEmailError[Muncul Pesan: Email Sudah Terdaftar]:::publicFlow
+    RegEmailError --> RegForm
+    CheckExist -- Belum --> GenOTPReg[Backend Buat Kode OTP 6-Digit<br/>Masa Aktif: 5 Menit]:::systemCloud
+    GenOTPReg --> SendBrevoReg[Brevo Kirim Email OTP Resmi ke Inbox User]:::systemCloud
+    SendBrevoReg --> OTPRegPage[Pindah ke Halaman Input OTP Registrasi]:::publicFlow
+    OTPRegPage --> InputOTPReg[Ketik 6 Kotak Digit OTP]:::publicFlow
+    InputOTPReg --> ValidateOTPReg{Kode OTP Cocok & Belum Expired?}:::decision
+    ValidateOTPReg -- Salah / Expired --> OTPRegFail[Peringatan Salah / Opsi Kirim Ulang OTP]:::publicFlow
+    OTPRegFail --> InputOTPReg
+    ValidateOTPReg -- Valid --> HashPass[Enkripsi Password dengan Bcrypt]:::systemCloud
+    HashPass --> CreateUserDB[Simpan Akun Baru ke Firestore 'users']:::systemCloud
+    CreateUserDB --> DeleteTempOTP[Hapus Data OTP Sementara dari Database]:::systemCloud
+    DeleteTempOTP --> IssueJWT
+
+    %% OPSI 4: LUPA PASSWORD
+    AuthChoice -- 4. Lupa Password? --> ForgotPage[Input Alamat Email Terdaftar]:::publicFlow
+    ForgotPage --> CheckForgotEmail{Email Ada di Sistem?}:::decision
+    CheckForgotEmail -- Tidak Ada --> ForgotEmailErr[Pesan: Email Tidak Ditemukan]:::publicFlow
+    ForgotEmailErr --> ForgotPage
+    CheckForgotEmail -- Ada --> GenOTPReset[Generate Kode OTP Reset Password]:::systemCloud
+    GenOTPReset --> SendBrevoReset[Brevo Kirim Email Reset Password]:::systemCloud
+    SendBrevoReset --> ResetPage[Input 6 Digit OTP + Password Baru & Konfirmasi]:::publicFlow
+    ResetPage --> ValidateOTPReset{OTP Benar & Belum Expired?}:::decision
+    ValidateOTPReset -- Salah --> ResetFail[Pesan: Kode OTP Salah]:::publicFlow
+    ResetFail --> ResetPage
+    ValidateOTPReset -- Benar --> UpdateNewPass[Update Password Baru di Database]:::systemCloud
+    UpdateNewPass --> ResetSuccess[Sukses! Kembali ke Halaman Login]:::publicFlow
+    ResetSuccess --> LoginPage
+
+    %% --- CABANG SETELAH PUNYA SESI (LOGIN BERHASIL) ---
+    CheckSession -- Ada Token JWT Sah --> RoleCheck{Cek Role Pengguna di Token}:::decision
+    IssueJWT --> RoleCheck
+
+    %% ==========================================
+    %% JALUR 1: ADMIN (TIM MAINTENANCE & FASILITAS)
+    %% ==========================================
+    RoleCheck -- Role = 'admin' --> AdminEntry[Diarahkan ke /dashboard Admin]:::adminFlow
+
+    AdminEntry --> AdminMenu{Pilih Menu Navigasi Admin?}:::decision
+
+    %% Menu 1: Dashboard Admin
+    AdminMenu -- Dashboard Monitoring --> AdminDash[Lihat KPI Card: Total, Menunggu, Diproses, Selesai<br/>Grafik Bar Kategori Kerusakan & Pie Status]:::adminFlow
+
+    %% Menu 2: Kelola Laporan
+    AdminMenu -- Kelola Laporan (/admin/laporan) --> AdminReports[Buka Panel Manajemen Semua Tiket Masuk]:::adminFlow
+    AdminReports --> FilterAction{Gunakan Filter / Pencarian?}:::decision
+    FilterAction -- Ya --> ApplyFilters[Filter: Status, Kategori, Prioritas, Tanggal, Cari Nama]:::adminFlow
+    FilterAction -- Tidak --> ViewAllReports[Tampilkan Seluruh Laporan Realtime]:::adminFlow
+    ApplyFilters --> ViewAllReports
+
+    ViewAllReports --> TicketAction{Pilih Aksi Tiket?}:::decision
+    TicketAction -- Klik Detail --> OpenModalDetail[Buka Modal: Foto Bukti Kerusakan, Log Audit, Catatan]:::adminFlow
+    OpenModalDetail --> UpdateStatusAdmin[Ubah Status: Diproses / Selesai / Ditolak]:::adminFlow
+    UpdateStatusAdmin --> SaveStatusLog[Simpan Perubahan & Catat Log Aktivitas Realtime]:::systemCloud
     
-    %% Alur Auth
-    RoleCheck -- Belum --> Register[Registrasi Akun]:::userClass
-    Register --> SendOTP[Kirim OTP ke Email via Brevo]:::sysClass
-    SendOTP --> VerifyOTP{Verifikasi OTP Valid?}
-    VerifyOTP -- Tidak --> Register
-    VerifyOTP -- Ya --> Login[Login ke Akun]:::userClass
+    TicketAction -- Komunikasi --> OpenAdminChat[Buka Live Chat Tiket dengan Pelapor]:::adminFlow
+    OpenAdminChat --> SendAdminMsg[Kirim Pesan Bantuan via Firestore Realtime]:::systemCloud
 
-    RoleCheck -- Sudah --> Login
-    Login --> RoleDecision{Role Pengguna?}
+    TicketAction -- Ekspor Rekap --> ExportChoice{Pilih Format Ekspor?}:::decision
+    ExportChoice -- PDF --> DownloadPDF[Generate Dokumen Rekap Resmi Berlogo via jsPDF]:::adminFlow
+    ExportChoice -- Excel --> DownloadExcel[Generate File Spreadsheet .xlsx via ExcelJS]:::adminFlow
 
-    %% Jalur Pelapor
-    RoleDecision -- Pelapor / User --> UserDash[Halaman Riwayat / Form Lapor]:::userClass
-    UserDash --> CreateReport[Isi Form Pengaduan Fasilitas]:::userClass
-    CreateReport --> UploadBlob[Unggah Foto ke Vercel Blob]:::sysClass
-    UploadBlob --> SaveFirestore[Simpan Tiket ke Firebase Firestore]:::sysClass
-    SaveFirestore --> GetInvoice[Terbit Nomor Tiket TKT-XXXXXX]:::userClass
+    %% Menu 3: Profil Admin
+    AdminMenu -- Profil Saya --> AdminProfile[Edit Nama, Ganti Password, Ganti Foto Avatar]:::adminFlow
+    AdminProfile --> UploadAdminAvatar[Unggah Avatar ke Vercel Blob]:::systemCloud
 
-    %% Jalur Admin
-    RoleDecision -- Admin --> AdminDash[Dashboard Statistik & Monitoring]:::adminClass
-    SaveFirestore -. Realtime Update .-> AdminList[Panel Daftar Aduan Masuk]:::adminClass
-    AdminList --> ReviewReport[Admin Review & Cek Kerusakan]:::adminClass
-    ReviewReport --> UpdateStatus[Ubah Status: Diproses / Selesai / Ditolak]:::adminClass
-    UpdateStatus --> ChatReport[Komunikasi via Live Chat Realtime]:::sysClass
-    ChatReport <--> UserChat[Pelapor Pantau Progres di Riwayat]:::userClass
-    
-    %% Selesai
-    UpdateStatus --> DoneCheck{Status Selesai?}
-    DoneCheck -- Ya --> ExportData[Admin Ekspor Laporan PDF / Excel]:::adminClass
-    ExportData --> Finish([Selesai])
+    %% Menu 4: Logout Admin
+    AdminMenu -- Keluar / Logout --> LogoutAdmin[Hapus Sesi sessionStorage]:::publicFlow
+    LogoutAdmin --> LoginPage
+
+    %% ==========================================
+    %% JALUR 2: USER / KARYAWAN (PELAPOR)
+    %% ==========================================
+    RoleCheck -- Role = 'user' --> UserEntry[Diarahkan ke /riwayat Laporan Saya]:::userFlow
+
+    UserEntry --> UserMenu{Pilih Menu Navigasi Pelapor?}:::decision
+
+    %% Menu 1: Form Buat Laporan Baru
+    UserMenu -- Buat Laporan (/lapor) --> FormLapor[Buka Form Pengaduan Fasilitas]:::userFlow
+    FormLapor --> FillForm[Isi: Nama, Divisi, Lokasi/Ruangan, Kategori, Nama Barang, Deskripsi, Prioritas]:::userFlow
+    FillForm --> AttachPhoto{Lampirkan Foto Kerusakan?}:::decision
+    AttachPhoto -- Ya --> SelectPhoto[Pilih Foto Galeri / Kamera HP Max 5MB]:::userFlow
+    SelectPhoto --> UploadVercelBlob[Unggah Gambar ke Vercel Blob Storage]:::systemCloud
+    AttachPhoto -- Tidak --> SubmitReport[Klik Tombol 'Kirim Laporan']:::userFlow
+    UploadVercelBlob --> SubmitReport
+
+    SubmitReport --> GenTicketNumber[Sistem Generate No Tiket Unik: TKT-XXXXXX]:::systemCloud
+    GenTicketNumber --> SaveReportDB[Simpan Tiket ke Firestore 'reports']:::systemCloud
+    SaveReportDB --> ShowInvoiceModal[Muncul Modal Tanda Terima / Bukti Tiket Sah]:::userFlow
+    ShowInvoiceModal --> PrintOrSavePDF[Opsi: Cetak Tanda Terima / Unduh Bukti PDF]:::userFlow
+    PrintOrSavePDF --> RedirectRiwayat[Pindah ke Halaman Riwayat Saya]:::userFlow
+
+    %% Menu 2: Riwayat Laporan Saya
+    UserMenu -- Riwayat Laporan (/riwayat) --> ViewMyReports[Tampilkan Kartu & Tabel Tiket Milik Sendiri]:::userFlow
+    RedirectRiwayat --> ViewMyReports
+    ViewMyReports --> MyTicketAction{Pilih Aksi pada Laporan?}:::decision
+    MyTicketAction -- Cek Detail & Progres --> ViewTicketProgress[Lihat Status: Menunggu / Diproses / Selesai<br/>Lihat Catatan Teknisi & Estimasi Waktu]:::userFlow
+    MyTicketAction -- Chat Teknisi --> ChatWithTech[Kirim & Balas Pesan Chat Terkait Tiket Ini]:::userFlow
+
+    %% Menu 3: Profil Pelapor
+    UserMenu -- Profil Saya --> UserProfile[Edit Nama, Divisi, Ganti Password, Ganti Avatar]:::userFlow
+
+    %% Menu 4: Logout Pelapor
+    UserMenu -- Keluar / Logout --> LogoutUser[Hapus Sesi sessionStorage]:::publicFlow
+    LogoutUser --> LoginPage
 ```
 
 ---
 
-## 2. Alur Pelapor: Pembuatan Pengaduan & Tracking
+## 2. Rincian Penjelasan Setiap Tahap (*Step-by-Step Breakdown*)
 
-Alur detail saat seorang karyawan/pelapor melaporkan kerusakan fasilitas:
-
-```mermaid
-flowchart TD
-    A([Mulai]) --> B[Buka Menu 'Buat Laporan']
-    B --> C[Isi Identitas & Lokasi: Nama, Divisi, Ruangan]
-    C --> D[Pilih Kategori: Elektronik, Infrastruktur, Furniture, Jaringan, Lainnya]
-    D --> E[Isi Nama Barang & Deskripsi Kerusakan]
-    E --> F[Pilih Tingkat Prioritas: Rendah / Sedang / Tinggi]
-    F --> G{Lampirkan Foto Kerusakan?}
-    
-    G -- Ya --> H[Upload Foto Max 5MB]
-    H --> I[Unggah ke Vercel Blob Storage]
-    G -- Tidak --> J[Simpan Data Laporan]
-    I --> J
-
-    J --> K[Generate Nomor Tiket Otomatis: TKT-XXXXXX]
-    K --> L[Simpan ke Firestore Collection 'reports']
-    L --> M[Tampilkan Popup Tiket / Tanda Terima Resmi]
-    M --> N[Opsi: Cetak Tanda Terima / Download PDF]
-    N --> O[Diarahkan ke Halaman Riwayat Saya]
-    O --> P[Pelapor dapat memantau Status & Chat dengan Teknisi]
-    P --> Q([Selesai])
-```
+### 🔹 Fase 1: Pengecekan Sesi Awal (*Initialization*)
+1. Pengguna membuka URL aplikasi.
+2. Sistem mengecek memori browser (`sessionStorage.getItem('app_token')`).
+   - **Jika ada token valid:** Langsung diarahkan sesuai rolenya (**Admin** ➔ `/dashboard`, **User** ➔ `/riwayat`).
+   - **Jika tidak ada token:** Diarahkan ke halaman `/login`.
 
 ---
 
-## 3. Alur Admin: Penanganan Laporan & Manajemen Data
-
-Alur kerja petugas/admin dalam merespon dan memproses tiket aduan yang masuk:
-
-```mermaid
-flowchart TD
-    A([Admin Login]) --> B[Buka Panel 'Admin Laporan']
-    B --> C{Gunakan Filter?}
-    
-    C -- Ya --> D[Filter: Status, Kategori, Prioritas, Rentang Tanggal, atau Cari Nama]
-    C -- Tidak --> E[Tampilkan Semua Tiket Terurut Terbaru]
-    D --> E
-
-    E --> F[Klik Detail Tiket]
-    F --> G[Buka Modal Detail: Foto Kerusakan, Log Aktivitas, Riwayat Status]
-    
-    G --> H{Aksi yang Dipilih?}
-    
-    H -- Ubah Status --> I[Ubah Status: 'Menunggu' -> 'Diproses' -> 'Selesai' / 'Ditolak']
-    H -- Ubah Prioritas --> J[Sesuaikan Prioritas Urgensi]
-    H -- Koordinasi --> K[Kirim Pesan Live Chat ke Pelapor]
-    H -- Hapus --> L[Konfirmasi Hapus Tiket Permanen]
-
-    I --> M[Catat Log Aktivitas Otomatis di Database]
-    J --> M
-    K --> M
-    L --> M
-
-    M --> N{Butuh Rekap Data?}
-    N -- Ya --> O[Pilih 'Ekspor PDF Resmi' atau 'Ekspor Excel (XLSX)']
-    O --> P[File Rekapitulasi Terunduh Otomatis]
-    N -- Tidak --> Q([Selesai])
-    P --> Q
-```
+### 🔹 Fase 2: Pilihan di Halaman Login (`/login`)
+Pada halaman depan, pengguna memiliki 4 pilihan interaksi:
+1. **Masuk (Login Akun Biasa):** Menggunakan kombinasi Email & Password yang sudah pernah dibuat.
+2. **Masuk dengan Akun Google:** Login 1-klik menggunakan popup Google OAuth resmi.
+3. **Daftar Akun Baru (Register):**
+   - Pengguna mengisi data diri (Nama, Email kantor, Divisi, Password).
+   - Server membuat kode OTP 6-digit (kedaluwarsa 5 menit).
+   - Layanan **Brevo API** mengirimkan email resmi berlogo **Lapor JakBan**.
+   - Pengguna mengetik 6-digit OTP pada kotak verifikasi.
+   - Jika valid, password di-hash dengan **Bcrypt**, akun disimpan ke **Firestore**, dan otomatis login.
+4. **Lupa Password:**
+   - Memasukkan email terdaftar.
+   - Sistem mengirimkan kode OTP Reset Password ke email.
+   - Pengguna memasukkan OTP + Password baru.
+   - Password diperbarui di database dan pengguna dapat login kembali.
 
 ---
 
-## 4. Alur Otentikasi & Verifikasi OTP Email
-
-Alur keamanan akun menggunakan OTP 6-Digit via Brevo REST API:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Pengguna (Pelapor)
-    participant Client as Frontend (Vite/React)
-    participant Server as Backend (Express.js)
-    participant Brevo as Email Gateway (Brevo API)
-    participant DB as Cloud Firestore
-
-    %% Registrasi
-    User->>Client: Input Nama, Email, Password
-    Client->>Server: POST /api/auth/register
-    Server->>Server: Generate OTP 6 Digit (Exp: 5 Menit)
-    Server->>Brevo: Kirim Email Template Resmi (Logo JakBan)
-    Brevo-->>User: Email Masuk berisi Kode OTP 6 Digit
-    Server-->>Client: Response Status: Menunggu OTP
-
-    %% Verifikasi OTP
-    User->>Client: Input Kode 6 Digit OTP
-    Client->>Server: POST /api/auth/verify-otp
-    alt OTP Cocok & Belum Kedaluwarsa
-        Server->>DB: Simpan User Baru ke Collection 'users'
-        Server-->>Client: 200 OK + JWT Token Akses
-        Client-->>User: Login Berhasil, Masuk ke Dashboard
-    else OTP Salah atau Kedaluwarsa
-        Server-->>Client: 400 Error (Kode Tidak Valid)
-        Client-->>User: Tampilkan Peringatan & Tombol Kirim Ulang
-    end
-```
+### 🔹 Fase 3: Alur Kerja Pelapor / Karyawan (*User Flow*)
+Setelah berhasil login sebagai **User (Pelapor)**:
+* **Halaman `/lapor` (Buat Aduan):**
+  - Mengisi form kerusakan fasilitas (Elektronik, Infrastruktur, Furniture, Jaringan, Lainnya).
+  - Mengunggah foto kerusakan (disimpan aman di **Vercel Blob Storage**).
+  - Menentukan prioritas (*Rendah, Sedang, Tinggi*).
+  - Menerima nomor tiket resmi berformat `TKT-XXXXXX` dan dapat mencetak tanda terima invoice.
+* **Halaman `/riwayat` (Pemantauan):**
+  - Melihat status terkini aduan (*Menunggu ➔ Diproses ➔ Selesai / Ditolak*).
+  - Membuka live chat per-tiket untuk berkomunikasi langsung dengan teknisi yang menangani.
+* **Halaman `/profil`:**
+  - Memperbarui foto profil avatar dan mengubah password.
 
 ---
 
-## 5. Ringkasan Status & Siklus Hidup Tiket (*Ticket Lifecycle*)
+### 🔹 Fase 4: Alur Kerja Admin & Teknisi (*Admin Flow*)
+Setelah berhasil login sebagai **Admin**:
+* **Halaman `/dashboard` (Statistik & Analisis):**
+  - Memantau ringkasan total aduan yang menunggu, sedang dikerjakan, dan selesai.
+  - Membaca grafik kategori fasilitas yang paling sering rusak.
+* **Halaman `/admin/laporan` (Pusat Kendali Tiket):**
+  - Menyaring aduan berdasarkan tanggal, divisi, kategori, dan prioritas.
+  - Membuka detail tiket, mengubah status perbaikan, dan memberikan catatan teknis.
+  - Berkomunikasi dua arah via live chat realtime dengan pelapor.
+  - **Fitur Ekspor:** Mencetak rekapitulasi data laporan ke format **PDF Resmi** atau **Microsoft Excel (.xlsx)** untuk bahan rapat evaluasi pimpinan.
+* **Halaman `/profil`:** Mengelola akun administratif.
 
-| Status | Badge Warna | Makna & Tindakan |
-|---|---|---|
-| **Menunggu** | 🟡 Kuning | Laporan baru masuk dari pelapor, menunggu respon/tinjauan admin. |
-| **Diproses** | 🔵 Biru | Laporan sudah diterima teknisi dan dalam proses perbaikan di lapangan. |
-| **Selesai** | 🟢 Hijau | Kerusakan fasilitas telah berhasil diperbaiki secara tuntas. |
-| **Ditolak** | 🔴 Merah | Laporan tidak valid, duplikat, atau di luar tanggung jawab fasilitas kantor. |
+---
+
+### 🔹 Fase 5: Logout & Pengamanan Sesi
+* Pengguna dapat mengklik tombol **"Keluar / Logout"** di menu profil.
+* Browser langsung membersihkan tiket token JWT dari `sessionStorage`.
+* Pengguna kembali ke layar Login dan data aman dari akses orang lain di komputer kantor.
