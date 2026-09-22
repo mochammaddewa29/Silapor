@@ -28,17 +28,17 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
   </style>
   <![endif]-->
 </head>
-<body style="margin:0;padding:0;background-color:#0F172A;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   
   <!-- Preheader (hidden text for email preview) -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
     Kode verifikasi OTP Anda: ${otp} — Berlaku 5 menit. Jangan bagikan kode ini.
   </div>
 
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0F172A;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F8FAFC;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#1E293B;border-radius:20px;overflow:hidden;border:1px solid #334155;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#FFFFFF;border-radius:20px;overflow:hidden;border:1px solid #E2E8F0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -1px rgba(0,0,0,0.03);">
           
           <!-- Header with Logo -->
           <tr>
@@ -75,21 +75,21 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               <!-- Badge -->
               <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
                 <tr>
-                  <td style="background:#1E3A5F;border-radius:20px;padding:6px 14px;">
-                    <span style="color:#60A5FA;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">&#128274; Verifikasi Akun Baru</span>
+                  <td style="background:#EFF6FF;border-radius:20px;padding:6px 14px;border:1px solid #BFDBFE;">
+                    <span style="color:#1D4ED8;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">&#128274; Verifikasi Akun Baru</span>
                   </td>
                 </tr>
               </table>
 
-              <h2 style="margin:0 0 12px;color:#F8FAFC;font-size:22px;font-weight:800;line-height:1.3;">
+              <h2 style="margin:0 0 12px;color:#0F172A;font-size:22px;font-weight:800;line-height:1.3;">
                 Halo, ${fullName}!
               </h2>
-              <p style="margin:0 0 28px;color:#94A3B8;font-size:14px;line-height:1.7;">
-                Terima kasih telah mendaftar di <strong style="color:#E2E8F0;">Lapor JakBan</strong>. Masukkan kode verifikasi di bawah ini untuk mengaktifkan akun Anda.
+              <p style="margin:0 0 28px;color:#475569;font-size:14px;line-height:1.7;">
+                Terima kasih telah mendaftar di <strong style="color:#0F172A;">Lapor JakBan</strong>. Masukkan kode verifikasi di bawah ini untuk mengaktifkan akun Anda.
               </p>
 
               <!-- OTP Code Section -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0F172A;border:1px solid #334155;border-radius:16px;padding:28px 16px;margin-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:16px;padding:28px 16px;margin-bottom:24px;">
                 <tr>
                   <td style="text-align:center;padding-bottom:16px;">
                     <span style="color:#64748B;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">KODE VERIFIKASI OTP</span>
@@ -113,7 +113,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
                           <span style="font-size:14px;">&#9200;</span>
                         </td>
                         <td>
-                          <span style="color:#94A3B8;font-size:12px;font-weight:500;">Berlaku selama <strong style="color:#FFC107;">5 menit</strong></span>
+                          <span style="color:#64748B;font-size:12px;font-weight:500;">Berlaku selama <strong style="color:#D97706;">5 menit</strong></span>
                         </td>
                       </tr>
                     </table>
@@ -122,7 +122,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               </table>
 
               <!-- Security Warning -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;margin-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;margin-bottom:24px;">
                 <tr>
                   <td style="padding:16px;">
                     <table cellpadding="0" cellspacing="0" border="0">
@@ -131,9 +131,9 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
                           <span style="font-size:16px;">&#128272;</span>
                         </td>
                         <td>
-                          <p style="margin:0;color:#FBBF24;font-size:13px;font-weight:700;line-height:1.5;">Keamanan Akun Anda</p>
-                          <p style="margin:4px 0 0;color:#94A3B8;font-size:12px;line-height:1.6;">
-                            Jangan bagikan kode ini kepada siapa pun. Tim <strong style="color:#CBD5E1;">Lapor JakBan</strong> tidak pernah meminta kode OTP melalui pesan atau telepon.
+                          <p style="margin:0;color:#B45309;font-size:13px;font-weight:700;line-height:1.5;">Keamanan Akun Anda</p>
+                          <p style="margin:4px 0 0;color:#78350F;font-size:12px;line-height:1.6;">
+                            Jangan bagikan kode ini kepada siapa pun. Tim <strong style="color:#451A03;">Lapor JakBan</strong> tidak pernah meminta kode OTP melalui pesan atau telepon.
                           </p>
                         </td>
                       </tr>
@@ -143,7 +143,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
               </table>
 
               <!-- Info Text -->
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.6;text-align:center;">
+              <p style="margin:0;color:#64748B;font-size:12px;line-height:1.6;text-align:center;">
                 Jika Anda tidak merasa mendaftar, abaikan email ini.<br>Tidak ada tindakan lebih lanjut yang diperlukan.
               </p>
             </td>
@@ -151,16 +151,16 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
 
           <!-- Footer -->
           <tr>
-            <td style="background:#0F172A;border-top:1px solid #1E293B;padding:20px 32px;text-align:center;">
+            <td style="background:#F1F5F9;border-top:1px solid #E2E8F0;padding:20px 32px;text-align:center;">
               <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:8px;">
                 <tr>
-                  <td style="font-size:14px;font-weight:900;color:#64748B;letter-spacing:0.5px;padding-right:4px;">Lapor</td>
+                  <td style="font-size:14px;font-weight:900;color:#475569;letter-spacing:0.5px;padding-right:4px;">Lapor</td>
                   <td>
-                    <span style="display:inline-block;background:#334155;color:#94A3B8;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:800;letter-spacing:0.5px;">JakBan</span>
+                    <span style="display:inline-block;background:#CBD5E1;color:#1E293B;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:800;letter-spacing:0.5px;">JakBan</span>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0;color:#475569;font-size:11px;">© 2026 Lapor JakBan — Respon Tanggap 24/7</p>
+              <p style="margin:0;color:#64748B;font-size:11px;">© 2026 Lapor JakBan — Respon Tanggap 24/7</p>
             </td>
           </tr>
 
@@ -170,7 +170,7 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;margin-top:16px;">
           <tr>
             <td style="text-align:center;">
-              <p style="margin:0;color:#334155;font-size:10px;line-height:1.5;">
+              <p style="margin:0;color:#94A3B8;font-size:10px;line-height:1.5;">
                 Email ini dikirim secara otomatis oleh sistem Lapor JakBan.<br>
                 Mohon tidak membalas email ini.
               </p>
@@ -231,16 +231,16 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reset Password - Lapor JakBan</title>
 </head>
-<body style="margin:0;padding:0;background-color:#0F172A;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
     Kode reset password Anda: ${otp} — Berlaku 5 menit. Jangan bagikan kode ini.
   </div>
 
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0F172A;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F8FAFC;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#1E293B;border-radius:20px;overflow:hidden;border:1px solid #334155;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#FFFFFF;border-radius:20px;overflow:hidden;border:1px solid #E2E8F0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -1px rgba(0,0,0,0.03);">
           
           <!-- Header -->
           <tr>
@@ -274,21 +274,21 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
             <td style="padding:40px 32px 24px;">
               <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
                 <tr>
-                  <td style="background:#422006;border-radius:20px;padding:6px 14px;">
-                    <span style="color:#FBBF24;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">&#128275; Reset Password</span>
+                  <td style="background:#FFF7ED;border-radius:20px;padding:6px 14px;border:1px solid #FFEDD5;">
+                    <span style="color:#C2410C;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">&#128275; Reset Password</span>
                   </td>
                 </tr>
               </table>
 
-              <h2 style="margin:0 0 12px;color:#F8FAFC;font-size:22px;font-weight:800;line-height:1.3;">
+              <h2 style="margin:0 0 12px;color:#0F172A;font-size:22px;font-weight:800;line-height:1.3;">
                 Halo, ${fullName}!
               </h2>
-              <p style="margin:0 0 28px;color:#94A3B8;font-size:14px;line-height:1.7;">
-                Kami menerima permintaan untuk mereset password akun <strong style="color:#E2E8F0;">Lapor JakBan</strong> Anda. Masukkan kode verifikasi di bawah ini untuk membuat password baru.
+              <p style="margin:0 0 28px;color:#475569;font-size:14px;line-height:1.7;">
+                Kami menerima permintaan untuk mereset password akun <strong style="color:#0F172A;">Lapor JakBan</strong> Anda. Masukkan kode verifikasi di bawah ini untuk membuat password baru.
               </p>
 
               <!-- OTP Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0F172A;border:1px solid #334155;border-radius:16px;padding:28px 16px;margin-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:16px;padding:28px 16px;margin-bottom:24px;">
                 <tr>
                   <td style="text-align:center;padding-bottom:16px;">
                     <span style="color:#64748B;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">KODE RESET PASSWORD</span>
@@ -311,7 +311,7 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
                           <span style="font-size:14px;">&#9200;</span>
                         </td>
                         <td>
-                          <span style="color:#94A3B8;font-size:12px;font-weight:500;">Berlaku selama <strong style="color:#FFC107;">5 menit</strong></span>
+                          <span style="color:#64748B;font-size:12px;font-weight:500;">Berlaku selama <strong style="color:#D97706;">5 menit</strong></span>
                         </td>
                       </tr>
                     </table>
@@ -320,7 +320,7 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
               </table>
 
               <!-- Warning -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;margin-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;margin-bottom:24px;">
                 <tr>
                   <td style="padding:16px;">
                     <table cellpadding="0" cellspacing="0" border="0">
@@ -329,8 +329,8 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
                           <span style="font-size:16px;">&#128272;</span>
                         </td>
                         <td>
-                          <p style="margin:0;color:#FCA5A5;font-size:13px;font-weight:700;line-height:1.5;">Bukan Anda yang meminta?</p>
-                          <p style="margin:4px 0 0;color:#94A3B8;font-size:12px;line-height:1.6;">
+                          <p style="margin:0;color:#B91C1C;font-size:13px;font-weight:700;line-height:1.5;">Bukan Anda yang meminta?</p>
+                          <p style="margin:4px 0 0;color:#7F1D1D;font-size:12px;line-height:1.6;">
                             Jika Anda tidak meminta reset password, abaikan email ini. Password Anda akan tetap aman.
                           </p>
                         </td>
@@ -340,7 +340,7 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
                 </tr>
               </table>
 
-              <p style="margin:0;color:#475569;font-size:12px;line-height:1.6;text-align:center;">
+              <p style="margin:0;color:#64748B;font-size:12px;line-height:1.6;text-align:center;">
                 Demi keamanan, jangan bagikan kode ini kepada siapa pun.
               </p>
             </td>
@@ -348,16 +348,16 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
 
           <!-- Footer -->
           <tr>
-            <td style="background:#0F172A;border-top:1px solid #1E293B;padding:20px 32px;text-align:center;">
+            <td style="background:#F1F5F9;border-top:1px solid #E2E8F0;padding:20px 32px;text-align:center;">
               <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:8px;">
                 <tr>
-                  <td style="font-size:14px;font-weight:900;color:#64748B;letter-spacing:0.5px;padding-right:4px;">Lapor</td>
+                  <td style="font-size:14px;font-weight:900;color:#475569;letter-spacing:0.5px;padding-right:4px;">Lapor</td>
                   <td>
-                    <span style="display:inline-block;background:#334155;color:#94A3B8;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:800;letter-spacing:0.5px;">JakBan</span>
+                    <span style="display:inline-block;background:#CBD5E1;color:#1E293B;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:800;letter-spacing:0.5px;">JakBan</span>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0;color:#475569;font-size:11px;">© 2026 Lapor JakBan — Respon Tanggap 24/7</p>
+              <p style="margin:0;color:#64748B;font-size:11px;">© 2026 Lapor JakBan — Respon Tanggap 24/7</p>
             </td>
           </tr>
 
@@ -366,7 +366,7 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;margin-top:16px;">
           <tr>
             <td style="text-align:center;">
-              <p style="margin:0;color:#334155;font-size:10px;line-height:1.5;">
+              <p style="margin:0;color:#94A3B8;font-size:10px;line-height:1.5;">
                 Email ini dikirim secara otomatis oleh sistem Lapor JakBan.<br>
                 Mohon tidak membalas email ini.
               </p>
