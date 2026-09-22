@@ -118,11 +118,9 @@ npm run dev
 
 ---
 
-## 🔑 Akun Default Admin
+## 🔑 Setup Admin
 
-Untuk pertama kali login sebagai Administrator:
-* **Username:** `admin`
-* **Password:** `admin123`
+Buat akun Administrator menggunakan script backend dan kredensial yang disimpan di environment variable atau secret manager. Jangan menyimpan password admin di repository.
 
 ---
 
