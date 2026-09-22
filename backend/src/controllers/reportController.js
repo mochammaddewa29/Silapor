@@ -656,6 +656,41 @@ exports.deleteReport = async (req, res) => {
   }
 };
 
+// Delete report photo only (admin only)
+exports.deleteReportPhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reportRef = doc(db, 'reports', String(id));
+    const reportSnap = await getDoc(reportRef);
+    
+    if (!reportSnap.exists()) {
+      return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
+    }
+
+    const report = reportSnap.data();
+
+    if (!report.photo_url) {
+      return res.status(400).json({ error: 'Laporan ini tidak memiliki foto.' });
+    }
+
+    const deleted = await deleteFromBlob(report.photo_url);
+    if (!deleted) {
+      console.warn('[Delete Photo] Foto gagal dihapus dari Vercel Blob (mungkin bukan Vercel Blob URL):', report.photo_url);
+      // We can still proceed to set it to null in the DB if we want, but let's do it anyway
+    }
+
+    await updateDoc(reportRef, {
+      photo_url: null,
+      updated_at: getLocalDateTime()
+    });
+
+    res.json({ message: 'Foto laporan berhasil dihapus.' });
+  } catch (err) {
+    console.error('Delete report photo error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat menghapus foto laporan.' });
+  }
+};
+
 // Dashboard statistics
 exports.getDashboardStats = async (req, res) => {
   try {

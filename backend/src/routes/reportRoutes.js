@@ -41,6 +41,7 @@ router.put('/:id/status', authenticate, requireAdmin, reportController.updateSta
 router.put('/:id/priority', authenticate, requireAdmin, reportController.updatePriority);
 router.put('/:id/assign', authenticate, requireAdmin, reportController.assignTechnician);
 router.put('/:id/notes', authenticate, requireAdmin, reportController.addRepairNotes);
+router.delete('/:id/photo', authenticate, requireAdmin, reportController.deleteReportPhoto);
 router.delete('/:id', authenticate, requireAdmin, reportController.deleteReport);
 
 // Get logs for a report

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, MapPin, Tag, User, Wrench, FileText, Check, AlertCircle, Image as ImageIcon, Building, Printer, Activity } from 'lucide-react';
+import { X, Calendar, MapPin, Tag, User, Wrench, FileText, Check, AlertCircle, Image as ImageIcon, Building, Printer, Activity, Trash2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import ReportInvoiceModal from './ReportInvoiceModal';
@@ -19,6 +19,7 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
 
   useEffect(() => {
     if (isOpen && report?.id) {
@@ -78,6 +79,24 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
       setErrorMessage(err.response?.data?.error || 'Gagal menyimpan perubahan.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus foto bukti laporan ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    
+    setIsDeletingPhoto(true);
+    setErrorMessage('');
+    try {
+      await reportsAPI.deletePhoto(report.id);
+      // Trigger update to refresh parent component list so photo disappears
+      onUpdated();
+      alert('Foto berhasil dihapus.');
+    } catch (err) {
+      console.error('Failed to delete photo:', err);
+      setErrorMessage(err.response?.data?.error || 'Terjadi kesalahan saat menghapus foto.');
+    } finally {
+      setIsDeletingPhoto(false);
     }
   };
 
@@ -162,9 +181,22 @@ export const ReportDetailModal = ({ report, isOpen, onClose, onUpdated }) => {
           {/* Photo */}
           {photoFullUrl ? (
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                Foto Bukti Kerusakan
-              </h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Foto Bukti Kerusakan
+                </h4>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleDeletePhoto}
+                    disabled={isDeletingPhoto}
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-400 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 rounded-lg transition-colors border border-rose-200 dark:border-rose-800 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    {isDeletingPhoto ? 'Menghapus...' : 'Hapus Foto'}
+                  </button>
+                )}
+              </div>
               <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 flex justify-center">
                 <img
                   src={photoFullUrl}
