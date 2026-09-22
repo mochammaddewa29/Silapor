@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, deleteDoc } = require('../config/firebase');
 const { getLocalDateTime } = require('../utils/time');
 const { uploadToBlob } = require('../services/blobService');
-const { sendOTPEmail } = require('../services/emailService');
+const { sendOTPEmail, sendResetPasswordEmail } = require('../services/emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maintenance-system-secret-key-2024';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -400,5 +400,110 @@ exports.uploadAvatar = async (req, res) => {
   } catch (err) {
     console.error('Upload avatar error:', err);
     res.status(500).json({ error: 'Gagal mengunggah foto profil.' });
+  }
+};
+
+// Forgot Password - kirim OTP ke email
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email wajib diisi.' });
+    }
+
+    // Cari user berdasarkan email (username = email)
+    const usersRef = collection(db, 'users');
+    const qEmail = query(usersRef, where('username', '==', email));
+    const snapEmail = await getDocs(qEmail);
+
+    if (snapEmail.empty) {
+      return res.status(404).json({ error: 'Email tidak terdaftar di sistem kami.' });
+    }
+
+    const user = snapEmail.docs[0].data();
+
+    // Generate OTP 6 digit
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+
+    // Simpan OTP ke Firestore (koleksi password_resets)
+    const resetId = `reset_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    await setDoc(doc(db, 'password_resets', resetId), {
+      email,
+      user_id: user.id,
+      otp,
+      expires_at: expiresAt.toISOString(),
+      created_at: getLocalDateTime(),
+    });
+
+    // Kirim OTP ke email
+    await sendResetPasswordEmail(email, otp, user.full_name || email);
+
+    res.json({ message: 'Kode OTP reset password telah dikirim ke email Anda.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      return res.status(500).json({ error: 'Konfigurasi email server bermasalah. Hubungi administrator.' });
+    }
+    res.status(500).json({ error: 'Gagal mengirim OTP. Coba lagi.' });
+  }
+};
+
+// Reset Password - verifikasi OTP + set password baru
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, new_password } = req.body;
+
+    if (!email || !otp || !new_password) {
+      return res.status(400).json({ error: 'Email, OTP, dan password baru wajib diisi.' });
+    }
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: 'Password baru minimal 6 karakter.' });
+    }
+
+    const resetId = `reset_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const resetRef = doc(db, 'password_resets', resetId);
+    const resetSnap = await getDoc(resetRef);
+
+    if (!resetSnap.exists()) {
+      return res.status(404).json({ error: 'Kode OTP tidak ditemukan. Silakan minta OTP baru.' });
+    }
+
+    const resetData = resetSnap.data();
+
+    // Cek expired
+    if (new Date() > new Date(resetData.expires_at)) {
+      await deleteDoc(resetRef);
+      return res.status(410).json({ error: 'Kode OTP sudah kedaluwarsa. Silakan minta OTP baru.' });
+    }
+
+    // Cek OTP cocok
+    if (resetData.otp !== otp.trim()) {
+      return res.status(401).json({ error: 'Kode OTP salah. Periksa kembali email Anda.' });
+    }
+
+    // Update password user
+    const hashedPassword = bcrypt.hashSync(new_password, 10);
+    const userRef = doc(db, 'users', String(resetData.user_id));
+    await updateDoc(userRef, { password: hashedPassword });
+
+    // Hapus OTP reset setelah berhasil
+    await deleteDoc(resetRef);
+
+    // Auto-login: generate token
+    const userSnap = await getDoc(userRef);
+    const user = userSnap.data();
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ message: 'Password berhasil direset.', token, user: userWithoutPassword });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
   }
 };

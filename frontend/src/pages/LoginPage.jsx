@@ -16,12 +16,13 @@ import {
   ChevronLeft,
   ShieldCheck,
   Building,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { authAPI } from '../services/api';
 
-// Mode: 'login' | 'register' | 'otp'
+// Mode: 'login' | 'register' | 'otp' | 'forgot' | 'reset_otp'
 export const LoginPage = () => {
   const [mode, setMode] = useState('login');
 
@@ -41,7 +42,7 @@ export const LoginPage = () => {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
 
-  // OTP state
+  // OTP Register state
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(300); // 5 menit
@@ -49,6 +50,20 @@ export const LoginPage = () => {
   const [otpSuccess, setOtpSuccess] = useState(false);
   const otpRefs = useRef([]);
   const countdownRef = useRef(null);
+
+  // Forgot Password & Reset state
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [resetOtpValues, setResetOtpValues] = useState(['', '', '', '', '', '']);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetOtpCountdown, setResetOtpCountdown] = useState(300);
+  const [resetResendLoading, setResetResendLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const resetOtpRefs = useRef([]);
+  const resetCountdownRef = useRef(null);
 
   const [error, setError] = useState('');
 
@@ -60,7 +75,7 @@ export const LoginPage = () => {
     return <Navigate to={isAdmin ? '/dashboard' : '/riwayat'} replace />;
   }
 
-  // Countdown OTP
+  // Countdown OTP Register
   useEffect(() => {
     if (mode === 'otp') {
       setOtpCountdown(300);
@@ -75,6 +90,23 @@ export const LoginPage = () => {
       }, 1000);
     }
     return () => clearInterval(countdownRef.current);
+  }, [mode]);
+
+  // Countdown OTP Reset Password
+  useEffect(() => {
+    if (mode === 'reset_otp') {
+      setResetOtpCountdown(300);
+      resetCountdownRef.current = setInterval(() => {
+        setResetOtpCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(resetCountdownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(resetCountdownRef.current);
   }, [mode]);
 
   const formatCountdown = (secs) => {
@@ -231,6 +263,112 @@ export const LoginPage = () => {
     }
   };
 
+  // ---- FORGOT PASSWORD SUBMIT (SEND RESET OTP) ----
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!forgotEmail.trim()) {
+      return setError('Email wajib diisi.');
+    }
+    setForgotLoading(true);
+    try {
+      await authAPI.forgotPassword(forgotEmail.trim());
+      setResetOtpValues(['', '', '', '', '', '']);
+      setResetNewPassword('');
+      setResetConfirmPassword('');
+      setResetSuccess(false);
+      switchMode('reset_otp');
+    } catch (err) {
+      setError(parseErrorMessage(err, 'Gagal mengirim OTP reset password. Pastikan email terdaftar.'));
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // ---- RESET OTP INPUT HANDLING ----
+  const handleResetOtpChange = (index, value) => {
+    if (!/^\d?$/.test(value)) return;
+    const newOtp = [...resetOtpValues];
+    newOtp[index] = value;
+    setResetOtpValues(newOtp);
+    if (value && index < 5) {
+      resetOtpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleResetOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !resetOtpValues[index] && index > 0) {
+      resetOtpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleResetOtpPaste = (e) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      setResetOtpValues(pasted.split(''));
+      resetOtpRefs.current[5]?.focus();
+    }
+    e.preventDefault();
+  };
+
+  // ---- RESEND RESET OTP ----
+  const handleResendResetOTP = async () => {
+    setError('');
+    setResetResendLoading(true);
+    setResetOtpValues(['', '', '', '', '', '']);
+    try {
+      await authAPI.forgotPassword(forgotEmail.trim());
+      clearInterval(resetCountdownRef.current);
+      setResetOtpCountdown(300);
+      resetCountdownRef.current = setInterval(() => {
+        setResetOtpCountdown((prev) => {
+          if (prev <= 1) { clearInterval(resetCountdownRef.current); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+      resetOtpRefs.current[0]?.focus();
+    } catch (err) {
+      setError(parseErrorMessage(err, 'Gagal mengirim ulang OTP. Coba lagi.'));
+    } finally {
+      setResetResendLoading(false);
+    }
+  };
+
+  // ---- RESET PASSWORD SUBMIT ----
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    const otp = resetOtpValues.join('');
+    if (otp.length < 6) return setError('Masukkan 6 digit kode OTP reset.');
+    if (resetOtpCountdown === 0) return setError('Kode OTP sudah kedaluwarsa. Silakan minta OTP baru.');
+    if (resetNewPassword !== resetConfirmPassword) {
+      return setError('Password baru dan konfirmasi password tidak cocok.');
+    }
+    if (resetNewPassword.length < 6) {
+      return setError('Password baru minimal 6 karakter.');
+    }
+
+    setError('');
+    setResetLoading(true);
+    try {
+      const data = await authAPI.resetPassword(forgotEmail.trim(), otp, resetNewPassword);
+      if (data.token) {
+        sessionStorage.setItem('app_token', data.token);
+        sessionStorage.setItem('app_user', JSON.stringify(data.user));
+      }
+      setResetSuccess(true);
+      setTimeout(() => {
+        navigate(data.user?.role === 'admin' ? '/dashboard' : '/riwayat');
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setError(parseErrorMessage(err, 'Gagal mereset password. Pastikan OTP benar.'));
+      setResetOtpValues(['', '', '', '', '', '']);
+      resetOtpRefs.current[0]?.focus();
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0F172A] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-200">
 
@@ -274,7 +412,7 @@ export const LoginPage = () => {
           <div className="p-8">
 
             {/* Mode Tabs (Login / Daftar) — only show on login/register mode */}
-            {mode !== 'otp' && (
+            {mode !== 'otp' && mode !== 'forgot' && mode !== 'reset_otp' && (
               <div className="flex mb-8 bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-1">
                 <button
                   id="tab-login"
@@ -362,7 +500,20 @@ export const LoginPage = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Password</label>
+                      <button
+                        id="btn-forgot-password"
+                        type="button"
+                        onClick={() => {
+                          setForgotEmail(loginUsername.includes('@') ? loginUsername : '');
+                          switchMode('forgot');
+                        }}
+                        className="text-xs font-bold text-[#1E88E5] hover:underline transition-colors"
+                      >
+                        Lupa Password?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
                       <input
@@ -627,6 +778,217 @@ export const LoginPage = () => {
                         (tersedia dalam {formatCountdown(otpCountdown - 240)})
                       </p>
                     )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ========== FORGOT PASSWORD MODE ========== */}
+            {mode === 'forgot' && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => switchMode('login')}
+                  className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mb-6 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Kembali ke Login</span>
+                </button>
+
+                <div className="flex justify-center mb-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/30">
+                    <KeyRound className="h-8 w-8 text-[#F59E0B]" />
+                  </div>
+                </div>
+
+                <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2 text-center">Lupa Password?</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 text-center">
+                  Masukkan email akun Anda. Kami akan mengirimkan kode verifikasi OTP 6 digit untuk mereset password.
+                </p>
+
+                <form id="form-forgot" onSubmit={handleForgotSubmit} className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Alamat Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                      <input
+                        id="input-forgot-email"
+                        type="email"
+                        required
+                        placeholder="email@contoh.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    id="btn-forgot-submit"
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1E3F] to-[#1E88E5] hover:from-[#0E2A59] hover:to-blue-600 text-white py-3.5 px-4 text-sm font-bold shadow-lg shadow-blue-500/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer mt-2"
+                  >
+                    <Mail className="h-5 w-5" />
+                    <span>{forgotLoading ? 'Mengirim OTP...' : 'Kirim Kode OTP Reset'}</span>
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* ========== RESET PASSWORD OTP MODE ========== */}
+            {mode === 'reset_otp' && (
+              <div className="text-center">
+                {resetSuccess ? (
+                  <div className="py-8 flex flex-col items-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                      <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white">Password Berhasil Diubah!</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Mengalihkan ke dashboard...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-left">
+                      <button
+                        type="button"
+                        onClick={() => switchMode('forgot')}
+                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mb-6 cursor-pointer"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Kembali</span>
+                      </button>
+                    </div>
+
+                    <div className="flex justify-center mb-4">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/30">
+                        <KeyRound className="h-8 w-8 text-[#F59E0B]" />
+                      </div>
+                    </div>
+
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Atur Password Baru</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
+                      Masukkan kode OTP yang dikirim ke:
+                    </p>
+                    <p className="text-sm font-bold text-[#1E88E5] mb-6">{forgotEmail}</p>
+
+                    <form id="form-reset-password" onSubmit={handleResetPasswordSubmit} className="space-y-4 text-left">
+                      {/* OTP Boxes */}
+                      <div>
+                        <label className="block text-xs font-bold text-center text-slate-700 dark:text-slate-300 mb-2">
+                          KODE VERIFIKASI OTP (6 DIGIT)
+                        </label>
+                        <div className="flex justify-center gap-3 mb-2">
+                          {resetOtpValues.map((val, i) => (
+                            <input
+                              key={i}
+                              id={`reset-otp-input-${i}`}
+                              ref={(el) => (resetOtpRefs.current[i] = el)}
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={1}
+                              value={val}
+                              onChange={(e) => handleResetOtpChange(i, e.target.value)}
+                              onKeyDown={(e) => handleResetOtpKeyDown(i, e)}
+                              onPaste={i === 0 ? handleResetOtpPaste : undefined}
+                              className={`w-12 h-14 text-center text-2xl font-black rounded-xl border-2 bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white focus:outline-none transition-all ${
+                                val
+                                  ? 'border-[#F59E0B] bg-amber-50 dark:bg-amber-900/20'
+                                  : 'border-slate-200 dark:border-[#334155]'
+                              } focus:border-[#F59E0B] focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-900/40`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Countdown */}
+                        <div className={`text-center text-xs font-semibold mb-4 ${resetOtpCountdown === 0 ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {resetOtpCountdown > 0 ? (
+                            <>⏰ Kode berlaku: <span className="font-black text-[#F59E0B]">{formatCountdown(resetOtpCountdown)}</span></>
+                          ) : (
+                            '⚠️ Kode OTP sudah kedaluwarsa'
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Password Baru */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Password Baru</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                          <input
+                            id="input-reset-password"
+                            type={showResetPassword ? 'text' : 'password'}
+                            required
+                            minLength={6}
+                            placeholder="Minimal 6 karakter"
+                            value={resetNewPassword}
+                            onChange={(e) => setResetNewPassword(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-11 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowResetPassword(!showResetPassword)}
+                            className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Konfirmasi Password Baru */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Konfirmasi Password Baru</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                          <input
+                            id="input-reset-confirm"
+                            type="password"
+                            required
+                            placeholder="Ulangi password baru"
+                            value={resetConfirmPassword}
+                            onChange={(e) => setResetConfirmPassword(e.target.value)}
+                            className={`w-full rounded-xl border bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-colors ${
+                              resetConfirmPassword && resetNewPassword !== resetConfirmPassword
+                                ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:focus:ring-rose-900/40'
+                                : 'border-slate-200 dark:border-[#334155] focus:border-[#1E88E5] focus:ring-blue-100 dark:focus:ring-blue-900/40'
+                            }`}
+                          />
+                          {resetConfirmPassword && resetNewPassword === resetConfirmPassword && (
+                            <CheckCircle2 className="absolute right-3.5 top-3.5 h-4 w-4 text-emerald-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        id="btn-reset-submit"
+                        type="submit"
+                        disabled={resetLoading || resetOtpValues.join('').length < 6 || resetOtpCountdown === 0}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1E3F] to-[#1E88E5] hover:from-[#0E2A59] hover:to-blue-600 text-white py-3.5 px-4 text-sm font-bold shadow-lg shadow-blue-500/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 cursor-pointer mt-2"
+                      >
+                        <Lock className="h-5 w-5" />
+                        <span>{resetLoading ? 'Menyimpan Password...' : 'Simpan Password Baru'}</span>
+                      </button>
+
+                      <div className="text-center pt-2">
+                        <button
+                          id="btn-resend-reset-otp"
+                          type="button"
+                          onClick={handleResendResetOTP}
+                          disabled={resetResendLoading || (resetOtpCountdown > 240)}
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-[#1E88E5] dark:hover:text-[#1E88E5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <RefreshCcw className={`h-4 w-4 ${resetResendLoading ? 'animate-spin' : ''}`} />
+                          <span>{resetResendLoading ? 'Mengirim ulang...' : 'Kirim ulang OTP'}</span>
+                        </button>
+                        {resetOtpCountdown > 240 && (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                            (tersedia dalam {formatCountdown(resetOtpCountdown - 240)})
+                          </p>
+                        )}
+                      </div>
+                    </form>
                   </>
                 )}
               </div>
