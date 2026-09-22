@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Kirim OTP ke email user menggunakan Brevo REST API
  * @param {string} toEmail - Alamat email tujuan
  * @param {string} otp - Kode OTP 6 digit
@@ -20,6 +20,8 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Kode OTP - Lapor JakBan</title>
   <!--[if mso]>
   <style type="text/css">
@@ -27,6 +29,24 @@ exports.sendOTPEmail = async (toEmail, otp, fullName) => {
     td { font-family: Arial, sans-serif; }
   </style>
   <![endif]-->
+  <style>
+    :root { color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .dm-bg { background-color: #0F172A !important; }
+      .dm-card { background-color: #1E293B !important; border-color: #334155 !important; }
+      .dm-body { background-color: #1E293B !important; }
+      .dm-h2 { color: #F1F5F9 !important; }
+      .dm-p { color: #94A3B8 !important; }
+      .dm-otp { background-color: #0F172A !important; border-color: #334155 !important; }
+      .dm-badge { background-color: #1E3A5F !important; border-color: #1E40AF !important; }
+      .dm-badge-text { color: #60A5FA !important; }
+      .dm-warn { background-color: #1C1100 !important; border-color: #92400E !important; }
+      .dm-warn-title { color: #FBBF24 !important; }
+      .dm-warn-text { color: #D97706 !important; }
+      .dm-footer { background-color: #0F172A !important; border-color: #1E293B !important; }
+      .dm-footer-text { color: #475569 !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#F8FAFC;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   
@@ -229,7 +249,27 @@ exports.sendResetPasswordEmail = async (toEmail, otp, fullName) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Reset Password - Lapor JakBan</title>
+  <style>
+    :root { color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .dm-bg { background-color: #0F172A !important; }
+      .dm-card { background-color: #1E293B !important; border-color: #334155 !important; }
+      .dm-body { background-color: #1E293B !important; }
+      .dm-h2 { color: #F1F5F9 !important; }
+      .dm-p { color: #94A3B8 !important; }
+      .dm-otp { background-color: #0F172A !important; border-color: #334155 !important; }
+      .dm-badge { background-color: #431407 !important; border-color: #7C2D12 !important; }
+      .dm-badge-text { color: #FB923C !important; }
+      .dm-warn { background-color: #1A0000 !important; border-color: #7F1D1D !important; }
+      .dm-warn-title { color: #FCA5A5 !important; }
+      .dm-warn-text { color: #FECACA !important; }
+      .dm-footer { background-color: #0F172A !important; border-color: #1E293B !important; }
+      .dm-footer-text { color: #475569 !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#F8FAFC;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   
