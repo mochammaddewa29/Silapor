@@ -1,4 +1,4 @@
-# ⚡ SILAPOR - Sistem Informasi Layanan Pengaduan & Maintenance Fasilitas
+# ⚡ Lapor JakBan (SILAPOR) - Sistem Informasi Layanan Pengaduan & Maintenance Fasilitas
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Vercel-Deployment-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
 </p>
 
-**SILAPOR** adalah aplikasi web modern terintegrasi untuk pelaporan, pemantauan, dan manajemen perbaikan fasilitas atau barang inventaris kantor. Dirancang dengan antarmuka yang responsif, cepat, elegan, serta mendukung mode gelap/terang.
+**Lapor JakBan (SILAPOR)** adalah aplikasi web modern terintegrasi untuk pelaporan, pemantauan, dan manajemen perbaikan fasilitas atau barang inventaris kantor. Dirancang dengan antarmuka yang responsif, cepat, elegan, serta mendukung mode gelap/terang.
 
 ---
 
@@ -19,7 +19,7 @@
 * **Lapor Tanpa Ribet:** Karyawan / pelapor dapat langsung mengisi formulir aduan kerusakan tanpa login berbelit-belit.
 * **Kategori Dinamis:** Pilihan kategori terstruktur (*Elektronik, ATK, Infrastruktur, Furniture, Jaringan*) serta dukungan **Kategori Lainnya (Custom Input)** secara fleksibel.
 * **Tingkat Prioritas:** Klasifikasi aduan (*Rendah, Sedang, Tinggi / Kritis*).
-* **Upload Foto Bukti:** Lampirkan foto kondisi fisik kerusakan secara langsung dengan integrasi penyimpanan Cloudinary.
+* **Upload Foto Bukti:** Lampirkan foto kondisi fisik kerusakan secara langsung dengan integrasi penyimpanan Vercel Blob.
 * **Tanda Terima Instan (Invoice Modal):** Pengguna langsung mendapatkan nomor tiket unik (`#TKT-xxxxx`) dan invoice yang dapat langsung dicetak (*Print*).
 
 ### 2. 🔍 Tracking Tiket Publik (Cek Status)
@@ -34,8 +34,8 @@
 * **Export Excel:** Ekspor seluruh laporan ke spreadsheet `.xlsx` siap olah.
 
 ### 4. ☁️ Real-time Cloud Sync & Hybrid Database
-* Menggunakan **SQLite (WASM)** untuk performa query lokal yang cepat.
-* Tersinkronisasi otomatis dengan **Firebase Cloud Firestore** untuk persistensi data pada lingkungan *serverless deployment* (Vercel).
+* Menggunakan **Firebase Cloud Firestore** secara native untuk performa query dan persistensi data yang andal di lingkungan *serverless deployment* (Vercel).
+* Manajemen file terintegrasi dengan **Vercel Blob Storage** untuk unggahan foto yang optimal dan aman.
 
 ---
 
@@ -47,8 +47,8 @@
 | **Styling & UI** | Tailwind CSS v4, Lucide React Icons |
 | **Dokumen & Rekap** | jsPDF, jsPDF-AutoTable (PDF Engine) |
 | **Backend API** | Node.js, Express.js |
-| **Database & Cache** | SQLite (sql.js / WASM Binary), Firebase Firestore |
-| **Image Storage** | Cloudinary API |
+| **Database & Cache** | Firebase Firestore |
+| **Image Storage** | Vercel Blob Storage |
 | **Keamanan** | JSON Web Token (JWT), Bcrypt Password Hashing |
 | **Deployment** | Vercel (Serverless Functions) |
 
@@ -62,11 +62,11 @@ Silapor/
 │   └── index.js
 ├── backend/                # Source code backend REST API
 │   ├── src/
-│   │   ├── config/         # Konfigurasi Database, Firebase, dan Cloudinary
+│   │   ├── config/         # Konfigurasi Firebase
 │   │   ├── controllers/    # Handler logika endpoint (Laporan, Autentikasi, dll.)
 │   │   ├── middleware/     # Auth JWT & Upload Multer
 │   │   ├── routes/         # Definisi router API
-│   │   ├── services/       # Sinkronisasi Firebase & Cloudinary
+│   │   ├── services/       # Vercel Blob API Service
 │   │   └── server.js       # Express server runner lokal
 │   ├── .env.example
 │   └── package.json
@@ -100,7 +100,7 @@ cd Silapor
 cd backend
 npm install
 cp .env.example .env
-# Sesuaikan isi .env dengan kredensial Firebase dan Cloudinary Anda
+# Sesuaikan isi .env dengan kredensial Firebase dan Vercel Blob Anda
 npm run dev
 ```
 > Server backend berjalan di: `http://localhost:5000`
@@ -141,9 +141,7 @@ Proyek ini telah dikonfigurasi menggunakan file [`vercel.json`](./vercel.json) s
    - `FIREBASE_STORAGE_BUCKET=...`
    - `FIREBASE_MESSAGING_SENDER_ID=...`
    - `FIREBASE_APP_ID=...`
-   - `CLOUDINARY_CLOUD_NAME=...`
-   - `CLOUDINARY_API_KEY=...`
-   - `CLOUDINARY_API_SECRET=...`
+   - `BLOB_READ_WRITE_TOKEN=...`
 4. Klik **Deploy**. Vercel akan otomatis menjalankan `npm run vercel-build` dan meluncurkan aplikasi Anda secara publik!
 
 ---

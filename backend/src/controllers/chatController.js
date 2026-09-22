@@ -1,4 +1,4 @@
-const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, orderBy } = require('../config/firebase');
+const { db, collection, query, where, getDocs, setDoc, doc, getDoc, updateDoc, orderBy, limit } = require('../config/firebase');
 const { v4: uuidv4 } = require('uuid');
 const { getLocalDateTime } = require('../utils/time');
 
@@ -11,13 +11,28 @@ exports.getChatUsers = async (req, res) => {
     
     let users = [];
     
-    // Fetch latest message for each user
-    for (const userDoc of userSnap.docs) {
+    // Gunakan Promise.all untuk mempercepat pengecekan paralel per user
+    const usersData = await Promise.all(userSnap.docs.map(async (userDoc) => {
       const u = userDoc.data();
       
+      // Cek apakah user punya laporan ATAU punya riwayat chat
+      const reportsRef = collection(db, 'reports');
+      // Gunakan String() dan Number() jika memungkinkan, tapi lebih baik cek getDocs langsung
+      // Atau karena performa, cukup ambil 1 report untuk mengecek apakah ada
+      const qReports = query(reportsRef, where('user_id', '==', String(u.id)), limit(1));
+      
       const chatsRef = collection(db, `direct_chats/${u.id}/messages`);
-      const qChats = query(chatsRef, orderBy('created_at', 'desc'), require('firebase/firestore').limit(1));
-      const chatSnap = await getDocs(qChats);
+      const qChats = query(chatsRef, orderBy('created_at', 'desc'), limit(1));
+      
+      const [reportSnap, chatSnap] = await Promise.all([
+        getDocs(qReports),
+        getDocs(qChats)
+      ]);
+      
+      // Jika tidak punya laporan dan tidak punya chat, abaikan user ini
+      if (reportSnap.empty && chatSnap.empty) {
+        return null; 
+      }
       
       if (!chatSnap.empty) {
         const latestChat = chatSnap.docs[0].data();
@@ -27,8 +42,11 @@ exports.getChatUsers = async (req, res) => {
         u.latest_message = null;
         u.latest_message_time = null;
       }
-      users.push(u);
-    }
+      return u;
+    }));
+    
+    // Filter out nulls
+    users = usersData.filter(u => u !== null);
     
     // Sort by latest_message_time desc, then by full_name asc
     users.sort((a, b) => {
@@ -49,6 +67,7 @@ exports.getChatUsers = async (req, res) => {
     res.status(500).json({ error: 'Gagal memuat daftar pengguna chat.' });
   }
 };
+
 
 // Send a direct message
 exports.sendDirectMessage = async (req, res) => {

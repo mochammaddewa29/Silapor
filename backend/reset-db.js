@@ -1,43 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-const { initDatabase, getDb, saveDatabase } = require('./src/config/database');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { db, collection, getDocs, doc, deleteDoc, setDoc } = require('./src/config/firebase');
 
 async function resetAllData() {
   console.log('=== Memulai Pembersihan Total Database ===');
-  await initDatabase();
-  const sqlite = getDb();
 
-  // 1. Kosongkan seluruh laporan di SQLite
-  sqlite.run("DELETE FROM reports;");
-  try {
-    sqlite.run("DELETE FROM sqlite_sequence WHERE name='reports';");
-  } catch (e) {}
-  console.log('✔ Seluruh data laporan berhasil dihapus dari SQLite.');
-
-  // 2. Bersihkan seluruh user dan sisakan hanya akun master admin di SQLite
-  sqlite.run("DELETE FROM users WHERE username != 'admin';");
-  
-  // Pastikan admin ada
-  const checkAdmin = sqlite.exec("SELECT id FROM users WHERE username = 'admin'");
-  if (!checkAdmin.length || !checkAdmin[0].values.length) {
-    const hashed = bcrypt.hashSync('admin123', 10);
-    sqlite.run("INSERT INTO users (id, username, password, full_name, role) VALUES (1, 'admin', ?, 'Administrator Sistem', 'admin')", [hashed]);
-  } else {
-    sqlite.run("UPDATE users SET id = 1 WHERE username = 'admin'");
-  }
-  try {
-    sqlite.run("DELETE FROM sqlite_sequence WHERE name='users';");
-    sqlite.run("INSERT INTO sqlite_sequence (name, seq) VALUES ('users', 1);");
-  } catch (e) {}
-  console.log('✔ Seluruh akun guest dibersihkan. Hanya akun Admin yang tersisa.');
-
-  // 3. Simpan perubahan ke file database.sqlite
-  saveDatabase();
-  console.log('✔ File database.sqlite berhasil diperbarui.');
-
-  // 4. Bersihkan file foto di folder uploads
+  // 1. Bersihkan file foto di folder uploads
   const uploadsDir = path.join(__dirname, 'uploads');
   if (fs.existsSync(uploadsDir)) {
     const files = fs.readdirSync(uploadsDir);

@@ -608,6 +608,16 @@ exports.deleteReport = async (req, res) => {
     const report = reportSnap.data();
     const userId = report.user_id;
 
+    // Hapus foto dari Vercel Blob jika ada
+    if (report.photo_url) {
+      const deleted = await deleteFromBlob(report.photo_url);
+      if (deleted) {
+        console.log('[Delete Report] Foto berhasil dihapus dari Vercel Blob:', report.photo_url);
+      } else {
+        console.warn('[Delete Report] Foto tidak dihapus (mungkin bukan Vercel Blob URL):', report.photo_url);
+      }
+    }
+
     // Delete subcollections first (comments, logs) to prevent ghosts
     const commentsRef = collection(db, `reports/${id}/comments`);
     const commentsSnap = await getDocs(commentsRef);
@@ -869,40 +879,6 @@ exports.exportExcel = async (req, res) => {
   } catch (err) {
     console.error('Export Excel error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan saat export Excel.' });
-  }
-};
-
-// Delete report (admin only) - also deletes photo from Vercel Blob
-exports.deleteReport = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const reportRef = doc(db, 'reports', String(id));
-    const reportSnap = await getDoc(reportRef);
-
-    if (!reportSnap.exists()) {
-      return res.status(404).json({ error: 'Laporan tidak ditemukan.' });
-    }
-
-    const report = reportSnap.data();
-
-    // Hapus foto dari Vercel Blob jika ada
-    if (report.photo_url) {
-      const deleted = await deleteFromBlob(report.photo_url);
-      if (deleted) {
-        console.log('[Delete Report] Foto berhasil dihapus dari Vercel Blob:', report.photo_url);
-      } else {
-        console.warn('[Delete Report] Foto tidak dihapus (mungkin bukan Vercel Blob URL):', report.photo_url);
-      }
-    }
-
-    // Hapus dokumen laporan dari Firestore
-    await deleteDoc(reportRef);
-
-    res.json({ message: 'Laporan berhasil dihapus.' });
-  } catch (err) {
-    console.error('Delete report error:', err);
-    res.status(500).json({ error: 'Terjadi kesalahan saat menghapus laporan.' });
   }
 };
 

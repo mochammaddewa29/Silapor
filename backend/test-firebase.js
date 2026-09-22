@@ -1,13 +1,13 @@
-const { rtdb, ref, get, set, child } = require('./src/config/firebase');
+const { db, collection, getDocs } = require('./src/config/firebase');
 
 async function testConnection() {
-  console.log('Testing Firebase Realtime Database connection...');
+  console.log('Testing Firebase Cloud Firestore connection...');
   try {
-    const testRef = ref(rtdb, '.info/connected');
-    const snapshot = await get(testRef);
-    console.log('Firebase connected status:', snapshot.val());
+    const colRef = collection(db, 'users');
+    const snapshot = await getDocs(colRef);
+    console.log(`Firebase connected successfully. Found ${snapshot.size} users.`);
   } catch (err) {
-    console.error('Error connecting to Firebase RTDB:', err.message);
+    console.error('Error connecting to Firebase Firestore:', err.message);
   }
   process.exit(0);
 }

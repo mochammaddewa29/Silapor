@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch --watch-path=src src/server.js",
-    "sync-firebase": "node src/scripts/syncToFirebase.js"
+    "create-admin": "node create-admin.js",
+    "reset-db": "node reset-db.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
