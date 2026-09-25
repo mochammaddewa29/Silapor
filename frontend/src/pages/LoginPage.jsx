@@ -475,7 +475,16 @@ export const LoginPage = () => {
                   <span>{googleLoading ? 'Menghubungkan...' : 'Lanjutkan dengan Google'}</span>
                 </button>
 
-
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white dark:bg-[#1E293B] px-4 text-slate-500 font-medium tracking-wide">
+                      ATAU MASUK DENGAN AKUN
+                    </span>
+                  </div>
+                </div>
 
                 {/* Manual Login */}
                 <form id="form-login" onSubmit={handleLoginSubmit} className="space-y-5">
