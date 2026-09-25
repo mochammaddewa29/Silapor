@@ -12,13 +12,16 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 // Send OTP for registration
 exports.sendOTP = async (req, res) => {
   try {
-    const { email, full_name, password, divisi } = req.body;
+    const { email, username, full_name, password, divisi } = req.body;
 
-    if (!email || !full_name || !password || !divisi) {
-      return res.status(400).json({ error: 'Email, nama lengkap, password, dan divisi wajib diisi.' });
+    if (!email || !username || !full_name || !password || !divisi) {
+      return res.status(400).json({ error: 'Email, username, nama lengkap, password, dan divisi wajib diisi.' });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Format email tidak valid.' });
+    }
+    if (username.length < 3) {
+      return res.status(400).json({ error: 'Username minimal 3 karakter.' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password minimal 6 karakter.' });
@@ -31,8 +34,18 @@ exports.sendOTP = async (req, res) => {
     const usersRef = collection(db, 'users');
     const qEmail = query(usersRef, where('username', '==', email));
     const snapEmail = await getDocs(qEmail);
-    if (!snapEmail.empty) {
+    
+    const qEmailNew = query(usersRef, where('email', '==', email));
+    const snapEmailNew = await getDocs(qEmailNew);
+
+    if (!snapEmail.empty || !snapEmailNew.empty) {
       return res.status(409).json({ error: 'Email sudah terdaftar. Silakan login.' });
+    }
+
+    const qUsername = query(usersRef, where('username', '==', username));
+    const snapUsername = await getDocs(qUsername);
+    if (!snapUsername.empty) {
+      return res.status(409).json({ error: 'Username sudah digunakan.' });
     }
 
     // Generate OTP 6 digit
@@ -43,6 +56,7 @@ exports.sendOTP = async (req, res) => {
     const otpId = `otp_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
     await setDoc(doc(db, 'otps', otpId), {
       email,
+      username,
       full_name: full_name.trim(),
       password, // plain, akan di-hash setelah OTP diverifikasi
       divisi: divisi.trim(),
@@ -99,9 +113,19 @@ exports.verifyOTP = async (req, res) => {
     const usersRef = collection(db, 'users');
     const qEmail = query(usersRef, where('username', '==', email));
     const snapEmail = await getDocs(qEmail);
-    if (!snapEmail.empty) {
+    const qEmailNew = query(usersRef, where('email', '==', email));
+    const snapEmailNew = await getDocs(qEmailNew);
+    
+    if (!snapEmail.empty || !snapEmailNew.empty) {
       await deleteDoc(otpRef);
       return res.status(409).json({ error: 'Email sudah terdaftar. Silakan login.' });
+    }
+
+    const qUsername = query(usersRef, where('username', '==', otpData.username));
+    const snapUsername = await getDocs(qUsername);
+    if (!snapUsername.empty) {
+      await deleteDoc(otpRef);
+      return res.status(409).json({ error: 'Username sudah digunakan.' });
     }
 
     // Buat akun user
@@ -111,7 +135,8 @@ exports.verifyOTP = async (req, res) => {
 
     const newUser = {
       id: userId,
-      username: email,
+      username: otpData.username || email,
+      email: email,
       password: hashedPassword,
       full_name: otpData.full_name,
       divisi: otpData.divisi,
@@ -228,6 +253,7 @@ exports.googleLogin = async (req, res) => {
       user = {
         id: userId,
         username: email,
+        email: email,
         password: hashedPassword,
         full_name: displayName || username,
         role: 'user',
@@ -265,8 +291,13 @@ exports.login = async (req, res) => {
     }
 
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username', '==', username));
-    const querySnapshot = await getDocs(q);
+    const qUsername = query(usersRef, where('username', '==', username));
+    let querySnapshot = await getDocs(qUsername);
+
+    if (querySnapshot.empty) {
+      const qEmail = query(usersRef, where('email', '==', username));
+      querySnapshot = await getDocs(qEmail);
+    }
 
     if (querySnapshot.empty) {
       return res.status(401).json({ error: 'Username atau password salah.' });

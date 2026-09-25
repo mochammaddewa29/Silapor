@@ -51,8 +51,8 @@ export const authAPI = {
     const response = await api.post('/auth/register', data);
     return response.data;
   },
-  sendOTP: async (email, fullName, password, divisi) => {
-    const response = await api.post('/auth/send-otp', { email, full_name: fullName, password, divisi });
+  sendOTP: async (email, username, fullName, password, divisi) => {
+    const response = await api.post('/auth/send-otp', { email, username, full_name: fullName, password, divisi });
     return response.data;
   },
   verifyOTP: async (email, otp) => {

@@ -35,6 +35,7 @@ export const LoginPage = () => {
 
   // Register state
   const [regFullName, setRegFullName] = useState('');
+  const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regDivisi, setRegDivisi] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -173,10 +174,13 @@ export const LoginPage = () => {
     if (!regDivisi.trim()) {
       return setError('Divisi wajib diisi.');
     }
+    if (!regUsername.trim()) {
+      return setError('Username wajib diisi.');
+    }
 
     setRegLoading(true);
     try {
-      await authAPI.sendOTP(regEmail, regFullName, regPassword, regDivisi);
+      await authAPI.sendOTP(regEmail, regUsername, regFullName, regPassword, regDivisi);
       setOtpValues(['', '', '', '', '', '']);
       setOtpSuccess(false);
       switchMode('otp');
@@ -471,28 +475,19 @@ export const LoginPage = () => {
                   <span>{googleLoading ? 'Menghubungkan...' : 'Lanjutkan dengan Google'}</span>
                 </button>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-white dark:bg-[#1E293B] px-4 text-slate-500 font-medium tracking-wide">
-                      ATAU LOGIN MANUAL (ADMIN)
-                    </span>
-                  </div>
-                </div>
+
 
                 {/* Manual Login */}
                 <form id="form-login" onSubmit={handleLoginSubmit} className="space-y-5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Username/Email</label>
                     <div className="relative">
                       <User className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
                       <input
                         id="input-login-username"
                         type="text"
                         required
-                        placeholder="Masukkan username"
+                        placeholder="Masukkan username/email"
                         value={loginUsername}
                         onChange={(e) => setLoginUsername(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
@@ -590,6 +585,22 @@ export const LoginPage = () => {
                         placeholder="Nama lengkap Anda"
                         value={regFullName}
                         onChange={(e) => setRegFullName(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                      <input
+                        id="input-reg-username"
+                        type="text"
+                        required
+                        placeholder="Username unik Anda"
+                        value={regUsername}
+                        onChange={(e) => setRegUsername(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
                       />
                     </div>
