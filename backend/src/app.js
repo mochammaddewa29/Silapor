@@ -26,6 +26,7 @@ app.use('/uploads', express.static(path.join(os.tmpdir(), 'maintenance_uploads')
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const divisionRoutes = require('./routes/divisionRoutes');
 
 const authMiddleware = (authRoutes && authRoutes.default) ? authRoutes.default : authRoutes;
 const reportMiddleware = (reportRoutes && reportRoutes.default) ? reportRoutes.default : reportRoutes;
@@ -39,6 +40,10 @@ app.use('/reports', reportMiddleware);
 
 app.use('/api/chats', chatMiddleware);
 app.use('/chats', chatMiddleware);
+
+const divisionMiddleware = (divisionRoutes && divisionRoutes.default) ? divisionRoutes.default : divisionRoutes;
+app.use('/api/divisions', divisionMiddleware);
+app.use('/divisions', divisionMiddleware);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getImageUrl } from '../services/api';
+import { Building } from 'lucide-react';
 
 export const Sidebar = ({ isOpen, onClose }) => {
   const { user, isAdmin, logout } = useAuth();
@@ -55,6 +56,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
             label: 'Manajemen Laporan',
             description: 'Operasional & Tindakan',
             icon: ShieldCheck,
+            badge: 'Admin',
+          },
+          {
+            to: '/admin/divisi',
+            label: 'Manajemen Divisi',
+            description: 'Pengaturan Divisi',
+            icon: Building,
             badge: 'Admin',
           },
         ]

@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import ReportFormPage from './pages/ReportFormPage';
 import ReportHistoryPage from './pages/ReportHistoryPage';
 import AdminReportsPage from './pages/AdminReportsPage';
+import AdminDivisionsPage from './pages/AdminDivisionsPage';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './context/AuthContext';
 
@@ -41,6 +42,14 @@ export const App = () => {
           element={
             <ProtectedRoute adminOnly>
               <AdminReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="admin/divisi"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminDivisionsPage />
             </ProtectedRoute>
           }
         />

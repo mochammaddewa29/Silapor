@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { authAPI } from '../services/api';
+import { authAPI, divisionAPI } from '../services/api';
 
 // Mode: 'login' | 'register' | 'otp' | 'forgot' | 'reset_otp'
 export const LoginPage = () => {
@@ -42,6 +42,7 @@ export const LoginPage = () => {
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
+  const [divisionsList, setDivisionsList] = useState([]);
 
   // OTP Register state
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
@@ -75,6 +76,19 @@ export const LoginPage = () => {
   if (isAuthenticated) {
     return <Navigate to={isAdmin ? '/dashboard' : '/riwayat'} replace />;
   }
+
+  // Fetch divisions
+  useEffect(() => {
+    const fetchDivisions = async () => {
+      try {
+        const data = await divisionAPI.getAll();
+        setDivisionsList(data);
+      } catch (err) {
+        console.error('Gagal mengambil data divisi:', err);
+      }
+    };
+    fetchDivisions();
+  }, []);
 
   // Countdown OTP Register
   useEffect(() => {
@@ -635,15 +649,23 @@ export const LoginPage = () => {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Divisi / Bagian</label>
                     <div className="relative">
                       <Building className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-                      <input
+                      <select
                         id="input-reg-divisi"
-                        type="text"
                         required
-                        placeholder="Contoh: IT, HRD, Keuangan"
                         value={regDivisi}
                         onChange={(e) => setRegDivisi(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors"
-                      />
+                        className={`w-full rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-slate-900/60 py-3 pl-11 pr-4 text-sm focus:border-[#1E88E5] focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-colors appearance-none ${regDivisi ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}
+                      >
+                        <option value="" disabled>Pilih Divisi / Bagian Anda</option>
+                        {divisionsList.map((div) => (
+                          <option key={div.id} value={div.name}>{div.name}</option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                        <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
 

@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Printer
 } from 'lucide-react';
-import { reportsAPI } from '../services/api';
+import { reportsAPI, divisionAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ReportInvoiceModal from '../components/ReportInvoiceModal';
 
@@ -26,7 +26,8 @@ export const ReportFormPage = () => {
   const navigate = useNavigate();
 
   const [reporterName, setReporterName] = useState(user?.full_name || '');
-  const [division, setDivision] = useState('');
+  const [division, setDivision] = useState(user?.divisi || '');
+  const [divisionsList, setDivisionsList] = useState([]);
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState('Elektronik');
   const [customCategory, setCustomCategory] = useState('');
@@ -48,6 +49,18 @@ export const ReportFormPage = () => {
     { name: 'Jaringan', icon: Wifi, desc: 'WiFi, Router, Kabel LAN' },
     { name: 'Lainnya', icon: HelpCircle, desc: 'Kerusakan umum lainnya' },
   ];
+
+  React.useEffect(() => {
+    const fetchDivisions = async () => {
+      try {
+        const data = await divisionAPI.getAll();
+        setDivisionsList(data);
+      } catch (err) {
+        console.error('Gagal mengambil data divisi:', err);
+      }
+    };
+    fetchDivisions();
+  }, []);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -230,14 +243,27 @@ export const ReportFormPage = () => {
               </label>
               <div className="relative">
                 <Building className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
+                <select
                   required
-                  placeholder="Contoh: Divisi IT / Keuangan"
                   value={division}
                   onChange={(e) => setDivision(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-base sm:text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
+                  disabled={!!user?.divisi}
+                  className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-base sm:text-sm focus:outline-none appearance-none transition-colors ${
+                    !!user?.divisi 
+                      ? 'border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' 
+                      : 'border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white'
+                  }`}
+                >
+                  <option value="" disabled>Pilih Divisi / Bagian</option>
+                  {divisionsList.map((div) => (
+                    <option key={div.id} value={div.name}>{div.name}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                  <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
               </div>
             </div>
 

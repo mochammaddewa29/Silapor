@@ -211,6 +211,25 @@ export const chatAPI = {
   },
 };
 
+export const divisionAPI = {
+  getAll: async () => {
+    const response = await api.get('/divisions');
+    return response.data;
+  },
+  create: async (name) => {
+    const response = await api.post('/divisions', { name });
+    return response.data;
+  },
+  update: async (id, name) => {
+    const response = await api.put(`/divisions/${id}`, { name });
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/divisions/${id}`);
+    return response.data;
+  },
+};
+
 export const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http') || path.startsWith('data:')) return path;
